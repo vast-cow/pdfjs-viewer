@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in PDF.js
+description: Report a bug specific to this Web Viewer or Chromium extension
 title: "[Bug]: "
 body:
   - type: textarea
@@ -26,23 +26,21 @@ body:
       required: true
   - type: input
     attributes:
-      label: PDF.js version
-      description: Please find official releases [here](https://github.com/mozilla/pdf.js/releases)
+      label: Fork revision
+      description: Include the commit hash or release tag for your build.
     validations:
       required: true
   - type: dropdown
     attributes:
-      label: Is the bug present in the latest PDF.js version?
-      description: Please check the [online demo](https://github.com/mozilla/pdf.js#online-demo)
-      options: ["Yes", "No"]
-      default: 0
+      label: Does the issue also reproduce in upstream PDF.js?
+      description: Try the upstream demo and report upstream issues in the Mozilla PDF.js issue tracker.
+      options: ["Yes", "No", "Could not check"]
     validations:
       required: true
   - type: dropdown
     attributes:
-      label: Is a browser extension
-      options: ["Yes", "No"]
-      default: 1
+      label: Where does the issue occur?
+      options: ["Web Viewer", "Chromium extension", "Both"]
     validations:
       required: true
 
@@ -73,7 +71,7 @@ body:
   - type: input
     attributes:
       label: Link to a viewer
-      description: Needed if hosted on a site other than mozilla.github.io/pdf.js or as Firefox/Chrome extension
+      description: Include the URL if the issue occurs in a hosted Web Viewer.
 
   - type: textarea
     attributes:

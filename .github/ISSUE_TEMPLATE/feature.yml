@@ -1,19 +1,18 @@
 name: Feature request
-description: Propose a new feature or enhancement for PDF.js
+description: Propose an improvement to this Web Viewer or Chromium extension
 title: "[Feature]: "
 body:
   - type: dropdown
     attributes:
-      label: Is the feature relevant to the Firefox PDF Viewer?
-      options: ["Yes", "No"]
-      default: 1
+      label: Where would the feature be used?
+      options: ["Web Viewer", "Chromium extension", "Both"]
     validations:
       required: true
 
   - type: textarea
     attributes:
       label: Feature description
-      description: What new feature would you like PDF.js to have? Why would it be useful? What are the current workarounds?
+      description: What feature would you like to add? Why would it be useful? What are the current workarounds?
     validations:
       required: true
 

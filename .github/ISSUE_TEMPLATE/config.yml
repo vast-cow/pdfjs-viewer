@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Need help?
-    url: https://github.com/mozilla/pdf.js/discussions
-    about: If you need help on how to use PDF.js, please open a discussion where other community members can reply
+  - name: Upstream PDF.js issues
+    url: https://github.com/mozilla/pdf.js/issues
+    about: Report issues that also reproduce in upstream PDF.js.
+  - name: Security policy
+    url: https://github.com/vast-cow/pdfjs-viewer/security/policy
+    about: Follow the security policy for vulnerability reports.

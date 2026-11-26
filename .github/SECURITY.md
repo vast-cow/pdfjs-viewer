@@ -1,26 +1,19 @@
 # Security policy
 
-Mozilla takes the security of our software seriously. If you believe you have found a security vulnerability in PDF.js, please report it to us as described below.
+Keep vulnerability details out of public issues.
 
-## Reporting security vulnerabilities
+## This fork
 
-**Please don't report security vulnerabilities through public GitHub issues.**
+Private vulnerability reporting on GitHub is disabled for this repository. The
+fork has no confirmed private reporting channel.
 
-Where to report depends on what's affected:
+## Upstream PDF.js
 
-### The PDF.js library or the Firefox PDF Viewer
+- Report vulnerabilities in the PDF.js library, including `pdfjs-dist`, or in
+  Firefox's built-in viewer through [Mozilla Bugzilla](https://bugzilla.mozilla.org/enter_bug.cgi?product=Firefox&component=PDF%20Viewer&groups=firefox-core-security).
+  Mark the report security-sensitive to restrict access.
+- Report vulnerabilities in Mozilla's Chromium extension through upstream's
+  [private vulnerability reporting form](https://github.com/mozilla/pdf.js/security/advisories/new).
 
-Report the vulnerability in [Bugzilla](https://bugzilla.mozilla.org/enter_bug.cgi?product=Firefox&component=PDF%20Viewer&groups=firefox-core-security)
-and make sure that the checkbox in the "Security" section is checked so the required access
-controls are automatically configured:
-
-![Security checkbox](https://github.com/mozilla/pdf.js/blob/master/.github/security.png)
-
-The Mozilla security team will process the bug as described in
-[Mozilla's security bugs policy](https://www.mozilla.org/en-US/about/governance/policies/security-group/bugs).
-
-### The PDF.js Chrome extension
-
-The Chrome extension isn't part of Firefox and isn't tracked in Bugzilla. Report the
-vulnerability privately on GitHub, using the
-["Report a vulnerability"](https://github.com/mozilla/pdf.js/security/advisories/new) form.
+See the [upstream PDF.js security policy](https://github.com/mozilla/pdf.js/security)
+for details about Mozilla's reporting channels.

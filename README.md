@@ -5,6 +5,11 @@ viewer in `web/` and the Chromium extension in `extensions/chromium/`.
 Both use Mozilla's official [`pdfjs-dist@6.5.438`](https://registry.npmjs.org/pdfjs-dist/6.5.438)
 for parsing, rendering, and PDF form scripting.
 
+The full Web Viewer starts at `web/viewer.html`. To embed it, point an iframe
+at that page and pass the PDF URL in the `file` query parameter. Use a
+same-origin PDF URL and URL-encode the parameter value. This fork has
+discontinued the standalone embedding components and the `pdfjsViewer` global.
+
 ## Getting the Code
 
 Clone this repository and install its locked dependencies with a supported
@@ -77,7 +82,7 @@ npx gulp integrationtest --filter '^(find bar|Checkbox annotation|Text widget|Sc
 `gulp test` builds both targets and runs the Chromium preferences check,
 viewer unit tests, extension telemetry tests, and browser smoke tests. The smoke suite covers rendering,
 Japanese CMap and font loading, search, saving annotations, the viewer's print
-preparation, and extension HTTP and offline file access.
+preparation, full-Viewer iframe display, and extension HTTP and offline file access.
 
 The extended integration suite includes linked PDF fixtures. Fetch those with
 `node test/viewer-tests.mjs fixtures` before running `npx gulp integrationtest`
@@ -90,6 +95,13 @@ Change the viewer or extension in the corresponding source directory. Viewer
 localization lives in `l10n/`. Edit English strings in
 `l10n/en-US/viewer.ftl` and use `npx gulp importl10n` to import upstream
 translations.
+
+Use the fork's issue tracker for problems specific to this Web Viewer or
+Chromium extension. Report problems that reproduce in upstream PDF.js in
+Mozilla's issue tracker. Follow the security policy for vulnerabilities.
+[Fork issues](https://github.com/vast-cow/pdfjs-viewer/issues) ·
+[Upstream issues](https://github.com/mozilla/pdf.js/issues) ·
+[Security policy](.github/SECURITY.md)
 
 For the upstream project, see the [PDF.js contribution guide](https://github.com/mozilla/pdf.js/blob/master/.github/CONTRIBUTING.md)
 and [API documentation](https://mozilla.github.io/pdf.js/api/).
