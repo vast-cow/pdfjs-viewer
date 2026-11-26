@@ -1,3 +1,14 @@
+# Developing the extension
+
+Install dependencies with `npm ci --ignore-scripts` and run `npx gulp build`.
+In Chrome, open `chrome://extensions`, enable **Developer mode**, and use
+**Load unpacked** to select `build/chromium/`. Open a PDF over HTTP or HTTPS
+to check your changes. For local PDFs, enable **Allow access to file URLs**
+in the extension details. Rebuild and reload the extension after changes.
+
+Edit the viewer in `web/` and the extension files in `extensions/chromium/`.
+The [README](../README.md#testing-and-linting) lists the lint and test commands.
+
 # Reporting issues
 
 - Report issues specific to this Web Viewer or Chromium extension in the

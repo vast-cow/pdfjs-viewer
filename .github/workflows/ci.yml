@@ -1,4 +1,4 @@
-name: Viewer CI
+name: Chromium extension CI
 on: [push, pull_request, workflow_dispatch]
 
 permissions:
@@ -30,8 +30,8 @@ jobs:
       - name: Fetch linked viewer test PDFs
         run: node test/viewer-tests.mjs fixtures
 
-      - name: Build both targets and run viewer tests
+      - name: Build Chromium extension and run tests
         run: npx gulp test
 
-      - name: Run viewer integration tests
+      - name: Run integration tests in the test Chromium extension
         run: npx gulp integrationtest --filter '^(find bar|Checkbox annotation|Text widget|Scripting commands (in doc_actions|requires viewer controls))'

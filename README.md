@@ -1,14 +1,10 @@
-# PDF.js Web Viewer and Chromium Extension
+# PDF.js Viewer for Chromium
 
-This repository maintains the [PDF.js](https://mozilla.github.io/pdf.js/) web
+This repository maintains the full [PDF.js](https://mozilla.github.io/pdf.js/)
 viewer in `web/` and the Chromium extension in `extensions/chromium/`.
-Both use Mozilla's official [`pdfjs-dist@6.5.438`](https://registry.npmjs.org/pdfjs-dist/6.5.438)
+The extension bundles Mozilla's official
+[`pdfjs-dist@6.5.438`](https://registry.npmjs.org/pdfjs-dist/6.5.438)
 for parsing, rendering, and PDF form scripting.
-
-The full Web Viewer starts at `web/viewer.html`. To embed it, point an iframe
-at that page and pass the PDF URL in the `file` query parameter. Use a
-same-origin PDF URL and URL-encode the parameter value. This fork has
-discontinued the standalone embedding components and the `pdfjsViewer` global.
 
 ## Getting the Code
 
@@ -22,42 +18,25 @@ npm ci --ignore-scripts
 
 ## Getting Started
 
-### Development server
-
-```sh
-npx gulp server
-```
-
-Open [the viewer](http://localhost:8888/web/viewer.html) or
-[browse the test PDFs](http://localhost:8888/test/pdfs/?frame). The server
-serves the viewer source and the installed distribution and watches the
-localization files. Use `--port` to select a different port.
-
-### Browser extension
-
-Run `npx gulp chromium`. In `chrome://extensions`, enable **Developer mode**,
-choose **Load unpacked**, and select `build/chromium`. To open local PDFs,
-open the extension's details and enable **Allow access to file URLs**. The
-extension bundles its workers, scripting sandbox, CMaps, fonts, ICC profiles,
-and Wasm for offline use.
+Run `npx gulp build`. Open `chrome://extensions`, enable **Developer mode**,
+choose **Load unpacked**, and select `build/chromium/`. Open an HTTP or HTTPS
+PDF in Chrome to use the viewer. For local PDFs, open the extension's details
+and enable **Allow access to file URLs**.
 
 ## Building
 
 ```sh
-npx gulp generic
-npx gulp chromium
+npx gulp build
 ```
 
-Run `npx gulp build` to build both targets. To deploy the web viewer, serve
-the entire `build/generic/` directory over HTTP and open `web/viewer.html`
-under that directory. The `build/` and `web/` subdirectories hold the core
-modules and their companion assets. Keep their relative layout intact.
-The web build uses the modern distribution modules and the extension uses the
-legacy modules from the same release.
+`npx gulp chromium` runs the same build. The product is `build/chromium/`,
+with the viewer at `content/web/viewer.html` inside the extension. The extension
+bundles the legacy PDF.js modules, worker and renderer, scripting sandbox,
+CMaps, fonts, ICC profiles, and Wasm for offline use.
 
 When upgrading the dependency, update its exact pin and lockfile along with the
 viewer compatibility version. Verify the PDF.js API/worker version checks, the
-display layer's internal listener token, and the file layout of both builds.
+display layer's internal listener token, and the bundled extension file layout.
 
 The 6.5.438 core uses the stable text-layer metrics and editor geometry.
 Ink strokes near a page edge can shift when zooming out, and re-editing a
@@ -79,15 +58,18 @@ node test/viewer-tests.mjs fixtures
 npx gulp integrationtest --filter '^(find bar|Checkbox annotation|Text widget|Scripting commands (in doc_actions|requires viewer controls))'
 ```
 
-`gulp test` builds both targets and runs the Chromium preferences check,
-viewer unit tests, extension telemetry tests, and browser smoke tests. The smoke suite covers rendering,
-Japanese CMap and font loading, search, saving annotations, the viewer's print
-preparation, full-Viewer iframe display, and extension HTTP and offline file access.
+`gulp test` builds the extension and runs the Chromium preferences check,
+viewer unit tests, extension telemetry tests, and browser smoke tests. Smoke
+tests check rendering, Japanese CMap and font loading, search, annotation
+saving, and print preparation on an HTTP PDF routed to the extension. They
+also check PDFs embedded with `<embed>` and `<object>`, the extension's settings
+page, and offline local PDF access and scripting.
 
-The extended integration suite includes linked PDF fixtures. Fetch those with
-`node test/viewer-tests.mjs fixtures` before running `npx gulp integrationtest`
-without a filter. For suites that need a visible browser, set
-`CHROME_HEADFUL=1` and run with a desktop display.
+Integration tests load a test-only extension from `build/chromium-test/`.
+The test HTTP server provides PDF fixtures and test pages. Fetch the linked
+fixtures with `node test/viewer-tests.mjs fixtures` before running
+`npx gulp integrationtest` without a filter. For suites that need a visible
+browser, set `CHROME_HEADFUL=1` and run with a desktop display.
 
 ## Contributing
 
