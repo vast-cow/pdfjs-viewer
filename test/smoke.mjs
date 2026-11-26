@@ -159,6 +159,9 @@ async function runSmokeTests(browser, base) {
           window.PDFViewerApplication?.isViewerEmbedded &&
           document.querySelector(".textLayer .endOfContent")
       );
+      await viewerFrame.waitForSelector(".page .canvasWrapper canvas", {
+        visible: true,
+      });
       assert.deepEqual(errors, []);
       console.log("PASS embedded full viewer", viewerPath);
       await page.close();
