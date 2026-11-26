@@ -26,13 +26,12 @@
 /** @typedef {import("./struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
 
 import { AnnotationEditorLayer } from "pdfjs-dist";
-import { GenericL10n } from "web-null_l10n";
 
 /**
  * @typedef {object} AnnotationEditorLayerBuilderOptions
  * @property {AnnotationEditorUIManager} [uiManager]
  * @property {number} pageIndex
- * @property {L10n} [l10n]
+ * @property {L10n} l10n
  * @property {StructTreeLayerBuilder} [structTreeLayer]
  * @property {TextAccessibilityManager} [accessibilityManager]
  * @property {AnnotationLayer} [annotationLayer]
@@ -67,9 +66,6 @@ class AnnotationEditorLayerBuilder {
     this.pageIndex = options.pageIndex;
     this.accessibilityManager = options.accessibilityManager;
     this.l10n = options.l10n;
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      this.l10n ||= new GenericL10n();
-    }
     this.annotationEditorLayer = null;
     this.div = null;
     this._cancelled = false;

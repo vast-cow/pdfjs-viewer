@@ -71,7 +71,7 @@ path if it differs from `/usr/bin/google-chrome`.
 npx gulp lint
 npx gulp test
 node test/viewer-tests.mjs fixtures
-npx gulp integrationtest --filter '^(find bar|Checkbox annotation|Text widget|Simple viewer|Scripting commands (in doc_actions|requires viewer controls))'
+npx gulp integrationtest --filter '^(find bar|Checkbox annotation|Text widget|Scripting commands (in doc_actions|requires viewer controls))'
 ```
 
 `gulp test` builds both targets and runs the Chromium preferences check,

@@ -73,7 +73,6 @@ const DEFINES = Object.freeze({
   CHROME: false,
   MOZCENTRAL: false,
   GECKOVIEW: false,
-  COMPONENTS: false,
   LIB: false,
   INTERNAL_VIEWER: false,
   TESTING: false,
@@ -116,7 +115,6 @@ function createWebpackAlias({ CHROME }) {
     "web-download_manager": "",
     "web-external_services": "",
     "web-new_alt_text_manager": "web/new_alt_text_manager.js",
-    "web-null_l10n": "",
     "web-pdf_attachment_viewer": "web/pdf_attachment_viewer.js",
     "web-pdf_cursor_tools": "web/pdf_cursor_tools.js",
     "web-pdf_document_properties": "web/pdf_document_properties.js",
@@ -141,7 +139,6 @@ function createWebpackAlias({ CHROME }) {
       ? externalServices
       : "web/download_manager.js",
     "web-external_services": externalServices,
-    "web-null_l10n": CHROME ? "web/l10n.js" : "web/genericl10n.js",
     "web-preferences": externalServices,
     "web-print_service": "web/pdf_print_service.js",
   });

@@ -70,7 +70,6 @@ await Promise.all(
     "./pdf_find_utils_spec.js",
     "./pdf_history_spec.js",
     "./pdf_link_service_spec.js",
-    "./pdf_viewer.component_spec.js",
     "./pdf_viewer_spec.js",
     "./struct_tree_layer_builder_spec.js",
     "./ui_utils_spec.js",

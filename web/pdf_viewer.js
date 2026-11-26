@@ -67,10 +67,8 @@ import {
   VERTICAL_PADDING,
   watchScroll,
 } from "./ui_utils.js";
-import { GenericL10n } from "web-null_l10n";
 import { internalOpt } from "./internal_evt.js";
 import { PDFPageView } from "./pdf_page_view.js";
-import { PDFRenderingQueue } from "./pdf_rendering_queue.js";
 import { RenderingStates } from "./renderable_view.js";
 import { SimpleLinkService } from "./pdf_link_service.js";
 
@@ -102,7 +100,7 @@ function isValidAnnotationEditorMode(mode) {
  *   component.
  * @property {PDFScriptingManager} [scriptingManager] - The scripting manager
  *   component.
- * @property {PDFRenderingQueue} [renderingQueue] - The rendering queue object.
+ * @property {PDFRenderingQueue} renderingQueue - The rendering queue object.
  * @property {number} [textLayerMode] - Controls if the text layer used for
  *   selection and searching is created. The constants from {TextLayerMode}
  *   should be used. The default value is `TextLayerMode.ENABLE`.
@@ -229,7 +227,7 @@ class PDFPageViewBuffer {
 }
 
 /**
- * Simple viewer control to display PDF content/pages.
+ * Viewer control to display PDF pages.
  */
 class PDFViewer {
   #buffer = null;
@@ -376,9 +374,6 @@ class PDFViewer {
     this.enableSelectionRendering = options.enableSelectionRendering !== false;
     this.imagesRightClickMinSize = options.imagesRightClickMinSize ?? -1;
     this.l10n = options.l10n;
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      this.l10n ||= new GenericL10n();
-    }
     this.#enablePermissions = options.enablePermissions || false;
     this.pageColors = options.pageColors || null;
     this.#mlManager = options.mlManager || null;
@@ -387,15 +382,6 @@ class PDFViewer {
     this.#minDurationToUpdateCanvas = options.minDurationToUpdateCanvas ?? 500;
 
     this.renderingQueue = options.renderingQueue;
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      this.defaultRenderingQueue = !this.renderingQueue;
-
-      if (this.defaultRenderingQueue) {
-        // Custom rendering queue is not specified, using default one
-        this.renderingQueue = new PDFRenderingQueue();
-        this.renderingQueue.setViewer(this);
-      }
-    }
 
     const { abortSignal } = options;
     this.#abortSignal = abortSignal || null;
@@ -431,13 +417,6 @@ class PDFViewer {
       internalOpt
     );
 
-    if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
-      !options.l10n
-    ) {
-      // Ensure that Fluent is connected in e.g. the COMPONENTS build.
-      this.l10n.translate(this.container);
-    }
   }
 
   get printingAllowed() {
@@ -669,13 +648,6 @@ class PDFViewer {
       pagesRotation: rotation,
       pageNumber,
     });
-
-    if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
-      this.defaultRenderingQueue
-    ) {
-      this.update();
-    }
   }
 
   get firstPagePromise() {
@@ -1230,13 +1202,6 @@ class PDFViewer {
             viewer.lang = info.Language;
           }
         });
-
-        if (
-          (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
-          this.defaultRenderingQueue
-        ) {
-          this.update();
-        }
       })
       .catch(reason => {
         if (pdfDocument !== this.pdfDocument) {
@@ -1691,13 +1656,6 @@ class PDFViewer {
       scale: newScale,
       presetValue: preset ? newValue : undefined,
     });
-
-    if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
-      this.defaultRenderingQueue
-    ) {
-      this.update();
-    }
   }
 
   get #pageWidthScaleFactor() {
