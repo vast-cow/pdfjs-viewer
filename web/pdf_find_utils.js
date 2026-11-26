@@ -59,10 +59,7 @@ function isEntireWord(content, startIdx, length) {
 
 let NormalizeWithNFKC;
 function getNormalizeWithNFKC() {
-  if (
-    (typeof PDFJSDev === "undefined" && FeatureTest.platform.isFirefox) ||
-    (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL"))
-  ) {
+  if (typeof PDFJSDev === "undefined" && FeatureTest.platform.isFirefox) {
     // The `NormalizeWithNFKC` string is generated with the for loop below.
     // Because of a small difference between Chrome and Firefox, the string is
     // only hardcoded for Firefox, and Chrome (or others) will generate it at
@@ -76,7 +73,7 @@ function getNormalizeWithNFKC() {
   if (
     typeof PDFJSDev === "undefined" ||
     PDFJSDev.test("TESTING") ||
-    (!PDFJSDev.test("MOZCENTRAL") && !NormalizeWithNFKC)
+    !NormalizeWithNFKC
   ) {
     const ranges = [];
     const range = [];

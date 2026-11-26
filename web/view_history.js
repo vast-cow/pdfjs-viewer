@@ -18,11 +18,6 @@ const DEFAULT_VIEW_HISTORY_CACHE_SIZE = 20;
 /**
  * View History - This is a utility for saving various view parameters for
  *                recently opened files.
- *
- * The way that the view parameters are stored depends on how PDF.js is built,
- * for 'gulp <flag>' the following cases exist:
- *  - MOZCENTRAL        - uses sessionStorage.
- *  - GENERIC or CHROME - uses localStorage, if it is available.
  */
 class ViewHistory {
   constructor(fingerprint, cacheSize = DEFAULT_VIEW_HISTORY_CACHE_SIZE) {
@@ -51,17 +46,11 @@ class ViewHistory {
   async _writeToStorage() {
     const databaseStr = JSON.stringify(this.database);
 
-    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
-      sessionStorage.setItem("pdfjs.history", databaseStr);
-      return;
-    }
     localStorage.setItem("pdfjs.history", databaseStr);
   }
 
   async _readFromStorage() {
-    return typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-      ? sessionStorage.getItem("pdfjs.history")
-      : localStorage.getItem("pdfjs.history");
+    return localStorage.getItem("pdfjs.history");
   }
 
   async setMultiple(properties) {

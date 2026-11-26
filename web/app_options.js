@@ -61,27 +61,11 @@ const Type = {
 const defaultOptions = new Map([
   // Begin OptionKind.BROWSER
   [
-    "allowedGlobalEvents",
-    {
-      /** @type {object} */
-      value: null,
-      kind: OptionKind.BROWSER,
-    },
-  ],
-  [
     "canvasMaxAreaInBytes",
     {
       /** @type {number} */
       value: -1,
       kind: OptionKind.BROWSER + OptionKind.API,
-    },
-  ],
-  [
-    "isInAutomation",
-    {
-      /** @type {boolean} */
-      value: false,
-      kind: OptionKind.BROWSER,
     },
   ],
   [
@@ -101,14 +85,6 @@ const defaultOptions = new Map([
       /** @type {number} */
       value: 32767,
       kind: OptionKind.BROWSER + OptionKind.VIEWER,
-    },
-  ],
-  [
-    "nimbusDataStr",
-    {
-      /** @type {string} */
-      value: "",
-      kind: OptionKind.BROWSER,
     },
   ],
   [
@@ -187,17 +163,6 @@ const defaultOptions = new Map([
 
   // Begin OptionKind.VIEWER
   [
-    "altTextLearnMoreUrl",
-    {
-      /** @type {string} */
-      value:
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-          ? "https://support.mozilla.org/1/firefox/%VERSION%/%OS%/%LOCALE%/pdf-alt-text"
-          : "",
-      kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
-    },
-  ],
-  [
     "annotationEditorMode",
     {
       /** @type {number} */
@@ -226,7 +191,7 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        typeof PDFJSDev === "undefined" || PDFJSDev.test("MOZCENTRAL")
+        typeof PDFJSDev === "undefined"
           ? "https://support.mozilla.org/%LOCALE%/kb/view-pdf-files-firefox-or-choose-another-viewer#w_add-a-comment-to-a-pdf"
           : "",
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
@@ -248,21 +213,17 @@ const defaultOptions = new Map([
       kind: OptionKind.VIEWER,
     },
   ],
-  ...(typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")
-    ? [
-        [
-          "defaultUrl",
-          {
-            /** @type {string} */
-            value:
-              typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")
-                ? ""
-                : "compressed.tracemonkey-pldi-09.pdf",
-            kind: OptionKind.VIEWER,
-          },
-        ],
-      ]
-    : []),
+  [
+    "defaultUrl",
+    {
+      /** @type {string} */
+      value:
+        typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")
+          ? ""
+          : "compressed.tracemonkey-pldi-09.pdf",
+      kind: OptionKind.VIEWER,
+    },
+  ],
   [
     "defaultZoomDelay",
     {
@@ -336,18 +297,6 @@ const defaultOptions = new Map([
         OptionKind.VIEWER + OptionKind.PREFERENCE + OptionKind.EVENT_DISPATCH,
     },
   ],
-  ...(typeof PDFJSDev === "undefined" || PDFJSDev.test("GECKOVIEW")
-    ? [
-        [
-          "enableAndroidEditing",
-          {
-            /** @type {boolean} */
-            value: false,
-            kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
-          },
-        ],
-      ]
-    : []),
   [
     "enableAutoLinking",
     {
@@ -416,17 +365,7 @@ const defaultOptions = new Map([
     "enableNewBadge",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined" || PDFJSDev.test("MOZCENTRAL"),
-      kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
-    },
-  ],
-  [
-    // Import Firefox design-system tokens and enable Nova viewer styles. The
-    // Nova overrides also require browser.nova.enabled.
-    "enableNova",
-    {
-      /** @type {boolean} */
-      value: true,
+      value: typeof PDFJSDev === "undefined",
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -481,13 +420,9 @@ const defaultOptions = new Map([
   [
     "enableSignatureVerification",
     {
-      // On in MOZCENTRAL (NSS provides the verification path) and in
-      // local dev builds; off in shipping GENERIC builds, where no
-      // verifier is wired up by default.
+      // Enable the verification UI in development and test builds.
       /** @type {boolean} */
-      value:
-        typeof PDFJSDev === "undefined" ||
-        PDFJSDev.test("TESTING || MOZCENTRAL"),
+      value: typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING"),
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -526,22 +461,6 @@ const defaultOptions = new Map([
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
-  ...(typeof PDFJSDev === "undefined" ||
-  PDFJSDev.test("MOZCENTRAL && !GECKOVIEW")
-    ? [
-        [
-          "featuresNotificationDismissed",
-          {
-            /** @type {boolean} */
-            value: false,
-            kind:
-              OptionKind.VIEWER +
-              OptionKind.PREFERENCE +
-              OptionKind.EVENT_DISPATCH,
-          },
-        ],
-      ]
-    : []),
   [
     "highlightEditorColors",
     {
@@ -572,10 +491,7 @@ const defaultOptions = new Map([
     "imageResourcesPath",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-          ? "resource://pdf.js/web/images/"
-          : "./images/",
+      value: "./images/",
       kind: OptionKind.VIEWER,
     },
   ],
@@ -583,16 +499,9 @@ const defaultOptions = new Map([
     "imagesRightClickMinSize",
     {
       /** @type {number} */
-      value:
-        typeof PDFJSDev === "undefined" ||
-        // Firefox mobile does not support right-clicking on images,
-        // see https://bugzilla.mozilla.org/show_bug.cgi?id=2014081.
-        // This option is disabled by default outside of MOZCENTRAL
-        // because it degrades the text selection experience in Chrome
-        // and Safari.
-        PDFJSDev.test("MOZCENTRAL && !GECKOVIEW")
-          ? 16
-          : -1,
+      // Keep image context menus off in distribution builds to avoid
+      // interfering with text selection in Chrome and Safari.
+      value: typeof PDFJSDev === "undefined" ? 16 : -1,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -660,33 +569,17 @@ const defaultOptions = new Map([
       kind: OptionKind.VIEWER,
     },
   ],
-  ...(typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-    ? [
-        [
-          "rendererWorkerCount",
-          {
-            /** @type {number} */
-            value: 1,
-            kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
-          },
-        ],
-      ]
-    : []),
-  ...(typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")
-    ? [
-        [
-          "sandboxBundleSrc",
-          {
-            /** @type {string} */
-            value:
-              typeof PDFJSDev === "undefined"
-                ? "../node_modules/pdfjs-dist/build/pdf.sandbox.mjs"
-                : "../build/pdf.sandbox.mjs",
-            kind: OptionKind.VIEWER,
-          },
-        ],
-      ]
-    : []),
+  [
+    "sandboxBundleSrc",
+    {
+      /** @type {string} */
+      value:
+        typeof PDFJSDev === "undefined"
+          ? "../node_modules/pdfjs-dist/build/pdf.sandbox.mjs"
+          : "../build/pdf.sandbox.mjs",
+      kind: OptionKind.VIEWER,
+    },
+  ],
   [
     "sidebarViewOnLoad",
     {
@@ -751,12 +644,9 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
           ? "../node_modules/pdfjs-dist/cmaps/"
-          : PDFJSDev.test("MOZCENTRAL")
-            ? "resource://pdf.js/web/cmaps/"
-            : "../web/cmaps/",
+          : "../web/cmaps/",
       kind: OptionKind.API,
     },
   ],
@@ -851,12 +741,9 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
           ? "../node_modules/pdfjs-dist/iccs/"
-          : PDFJSDev.test("MOZCENTRAL")
-            ? "resource://pdf.js/web/iccs/"
-            : "../web/iccs/",
+          : "../web/iccs/",
       kind: OptionKind.API,
     },
   ],
@@ -873,28 +760,17 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
           ? "../node_modules/pdfjs-dist/standard_fonts/"
-          : PDFJSDev.test("MOZCENTRAL")
-            ? "resource://pdf.js/web/standard_fonts/"
-            : "../web/standard_fonts/",
+          : "../web/standard_fonts/",
       kind: OptionKind.API,
     },
   ],
   [
     "useSystemFonts",
     {
-      // On Android, there is almost no chance to have the font we want so we
-      // don't use the system fonts in this case (bug 1882613).
       /** @type {boolean|undefined} */
-      value: (
-        typeof PDFJSDev === "undefined"
-          ? window.isGECKOVIEW
-          : PDFJSDev.test("GECKOVIEW")
-      )
-        ? false
-        : undefined,
+      value: undefined,
       kind: OptionKind.API,
       type: Type.BOOLEAN + Type.UNDEFINED,
     },
@@ -912,12 +788,9 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
           ? "../node_modules/pdfjs-dist/wasm/"
-          : PDFJSDev.test("MOZCENTRAL")
-            ? "resource://pdf.js/web/wasm/"
-            : "../web/wasm/",
+          : "../web/wasm/",
       kind: OptionKind.API,
     },
   ],
@@ -925,27 +798,13 @@ const defaultOptions = new Map([
 
   // Begin OptionKind.WORKER
   [
-    "rendererPorts",
-    {
-      /** @type {Array<Worker>} */
-      value:
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-          ? globalThis.pdfjsPreloadedRendererWorkers || []
-          : [],
-      kind: OptionKind.WORKER,
-    },
-  ],
-  [
     "rendererSrc",
     {
       /** @type {string} */
       value:
-        // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
           ? "../node_modules/pdfjs-dist/build/pdf.renderer.mjs"
-          : PDFJSDev.test("MOZCENTRAL")
-            ? "resource://pdf.js/build/pdf.renderer.mjs"
-            : "../build/pdf.renderer.mjs",
+          : "../build/pdf.renderer.mjs",
       kind: OptionKind.WORKER,
     },
   ],
@@ -953,10 +812,7 @@ const defaultOptions = new Map([
     "workerPort",
     {
       /** @type {object} */
-      value:
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-          ? globalThis.pdfjsPreloadedWorker || null
-          : null,
+      value: null,
       kind: OptionKind.WORKER,
     },
   ],
@@ -965,12 +821,9 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
           ? "../node_modules/pdfjs-dist/build/pdf.worker.mjs"
-          : PDFJSDev.test("MOZCENTRAL")
-            ? "resource://pdf.js/build/pdf.worker.mjs"
-            : "../build/pdf.worker.mjs",
+          : "../build/pdf.worker.mjs",
       kind: OptionKind.WORKER,
     },
   ],

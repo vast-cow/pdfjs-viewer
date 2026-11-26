@@ -842,21 +842,18 @@ function toggleExpandedBtn(button, toggle, view = null) {
 // In Firefox, the css calc function uses f32 precision but the Chrome or Safari
 // are using f64 one. So in order to have the same rendering in all browsers, we
 // need to use the right precision in order to have correct dimensions.
-const calcRound =
-  typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-    ? Math.fround
-    : (function () {
-        if (
-          typeof PDFJSDev !== "undefined" &&
-          PDFJSDev.test("LIB") &&
-          typeof document === "undefined"
-        ) {
-          return x => x;
-        }
-        const e = document.createElement("div");
-        e.style.width = "round(down, calc(1.6666666666666665 * 792px), 1px)";
-        return e.style.width === "calc(1320px)" ? Math.fround : x => x;
-      })();
+const calcRound = (function () {
+  if (
+    typeof PDFJSDev !== "undefined" &&
+    PDFJSDev.test("LIB") &&
+    typeof document === "undefined"
+  ) {
+    return x => x;
+  }
+  const e = document.createElement("div");
+  e.style.width = "round(down, calc(1.6666666666666665 * 792px), 1px)";
+  return e.style.width === "calc(1320px)" ? Math.fround : x => x;
+})();
 
 export {
   animationStarted,

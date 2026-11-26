@@ -49,9 +49,6 @@ class DownloadManager extends BaseDownloadManager {
   }
 
   _getOpenDataUrl(blobUrl, filename, dest = null) {
-    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("COMPONENTS")) {
-      throw new Error("Opening data is not supported in `COMPONENTS` builds.");
-    }
     // The current URL is the viewer, let's use it and append the file.
     let url = "?file=" + encodeURIComponent(blobUrl + "#" + filename);
     if (dest) {

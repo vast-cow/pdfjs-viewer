@@ -147,8 +147,21 @@ async function runSmokeTests(browser, base) {
         timeout: 15000,
       });
       assert.deepEqual(errors, []);
-      await page.close();
       console.log("PASS render, search, annotation save and print", viewerPath);
+
+      await page.goto(base + "/test/");
+      await page.setContent('<iframe width="760" height="500"></iframe>');
+      const iframe = await page.waitForSelector("iframe");
+      const viewerFrame = await iframe.contentFrame();
+      await viewerFrame.goto(base + viewerPath + "?file=" + input);
+      await viewerFrame.waitForFunction(
+        () =>
+          window.PDFViewerApplication?.isViewerEmbedded &&
+          document.querySelector(".textLayer .endOfContent")
+      );
+      assert.deepEqual(errors, []);
+      console.log("PASS embedded full viewer", viewerPath);
+      await page.close();
     }
 
     const extensionId = await browser.installExtension(

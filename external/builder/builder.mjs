@@ -39,19 +39,6 @@ function preprocess(inFilename, outFilename, defines) {
   }
 
   function expandCssImports(content, baseUrl) {
-    if (defines.GECKOVIEW) {
-      // In Geckoview, we don't need some styles.
-      const startComment = "/* Ignored in GECKOVIEW: begin */";
-      const endComment = "/* Ignored in GECKOVIEW: end */";
-      const beginIndex = content.indexOf(startComment);
-      const endIndex = content.indexOf(endComment);
-      if (beginIndex >= 0 && endIndex > beginIndex) {
-        content =
-          content.substring(0, beginIndex) +
-          content.substring(endIndex + endComment.length);
-      }
-    }
-
     return content.replaceAll(
       /^[ \t]*@import\s+url\(([^)]+)\);[ \t]*$/gm,
       function (all, url) {

@@ -71,10 +71,7 @@ const BABEL_COREJS_OPTS = Object.freeze({
 const DEFINES = Object.freeze({
   GENERIC: false,
   CHROME: false,
-  MOZCENTRAL: false,
-  GECKOVIEW: false,
   LIB: false,
-  INTERNAL_VIEWER: false,
   TESTING: false,
 });
 

@@ -116,10 +116,7 @@ class CaretBrowsingMode {
   }
 
   static #caretPositionFromPoint(x, y) {
-    if (
-      (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) &&
-      !document.caretPositionFromPoint
-    ) {
+    if (!document.caretPositionFromPoint) {
       const { startContainer: offsetNode, startOffset: offset } =
         document.caretRangeFromPoint(x, y);
       return { offsetNode, offset };

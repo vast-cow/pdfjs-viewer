@@ -36,15 +36,6 @@
   --input-text-bg-color: light-dark(white, #42414d);
   --input-text-fg-color: var(--text-primary-color);
 
-  /* Match Nova popup borders, separators, and shadows. */
-  /*#if MOZCENTRAL && !GECKOVIEW*/
-  @media -moz-pref("pdfjs.enableNova") and -moz-pref("browser.nova.enabled") {
-    --dialog-border-color: var(--border-color-deemphasized);
-    --dialog-shadow: var(--box-shadow-level-3);
-    --separator-color: var(--border-color-deemphasized);
-  }
-  /*#endif*/
-
   @media screen and (forced-colors: active) {
     --dialog-bg-color: var(--background-color-canvas, Canvas);
     /* border-only: --background-color-canvas would resolve to Canvas in FF HCM
@@ -110,9 +101,7 @@
       align-self: flex-end;
     }
 
-    /* Native checkbox/radio tinted with the accent at Firefox's control size,
-       matching Firefox's default form controls (the custom appearance is
-       Nova-only in Firefox, so the default look is native + accent-color). */
+    /* Tint native checkboxes and radio buttons with the accent color. */
     input:is([type="checkbox"], [type="radio"]) {
       accent-color: var(--color-accent-primary, light-dark(#0060df, #0df));
       width: var(--checkbox-size, 16px);

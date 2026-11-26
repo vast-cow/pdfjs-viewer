@@ -236,11 +236,9 @@ class TextLayerBuilder {
     const { signal } = this.#selectionChangeAC;
 
     const reset = (end, textLayer) => {
-      if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
-        textLayer.append(end);
-        end.style.width = "";
-        end.style.height = "";
-      }
+      textLayer.append(end);
+      end.style.width = "";
+      end.style.height = "";
       textLayer.classList.remove("selecting");
     };
 
@@ -278,10 +276,7 @@ class TextLayerBuilder {
       { signal }
     );
 
-    if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
-      // eslint-disable-next-line no-var
-      var isFirefoxOrModernChromium, prevRange;
-    }
+    let isFirefoxOrModernChromium, prevRange;
 
     document.addEventListener(
       "selectionchange",
@@ -324,9 +319,6 @@ class TextLayerBuilder {
           }
         }
 
-        if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
-          return;
-        }
         if (isFirefoxOrModernChromium === undefined) {
           if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("CHROME")) {
             isFirefoxOrModernChromium =

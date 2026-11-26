@@ -29,13 +29,7 @@ See https://github.com/adobe-type-tools/cmap-resources
     <!--#endif-->
     <title>PDF.js viewer</title>
 
-    <!--#if MOZCENTRAL-->
-    <!--<link rel="icon" type="image/svg+xml" href="chrome://global/skin/icons/pdf.svg" />-->
-    <!--<meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src resource: chrome: 'wasm-unsafe-eval'; worker-src resource:; style-src resource: chrome:; img-src resource: blob: data:; media-src blob:; font-src resource:; connect-src resource:; base-uri 'none'; form-action 'none';"
-    />-->
-    <!--#elif TESTING-->
+    <!--#if TESTING-->
     <!--<meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' blob: data:; media-src blob:; font-src 'self' data:; connect-src * blob: data:; base-uri 'self'; form-action 'none';"
@@ -58,38 +52,11 @@ See https://github.com/adobe-type-tools/cmap-resources
     <!--#include viewer-snippet.html-->
     <!--#endif-->
 
-    <!-- In Firefox, preload the icons visible on load, i.e. the main toolbar
-         ones (the media queries match the breakpoints of the Nova toolbar in
-         viewer.css), since the CSS only fetches them once rendered. The icons
-         of the UI hidden on load are fetched later, from
-         PDFViewerApplication.load in app.js: please keep both lists in sync. -->
-    <!--#if MOZCENTRAL-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-viewsManagerToggle.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-pageUp.svg" media="(min-width: 801px)">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-pageDown.svg" media="(min-width: 801px)">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-zoomOut.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-zoomIn.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/comment-editButton.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-editorSignature.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-editorHighlight.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-editorFreeText.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-editorInk.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-editorStamp.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-print.svg" media="(min-width: 881px)">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-download.svg" media="(min-width: 881px)">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/toolbarButton-secondaryToolbarToggle.svg">-->
-    <!--<link rel="preload" as="image" href="resource://pdf.js/web/images/loading.svg">-->
-    <!--<link rel="stylesheet" href="resource://pdf.js/web/viewer.css">-->
-    <!--<link rel="localization" href="toolkit/pdfviewer/viewer.ftl"/>-->
-    <!--#else-->
     <link rel="stylesheet" href="viewer.css" />
-    <!--#endif-->
 
-    <!--#if MOZCENTRAL-->
-    <!--<script src="resource://pdf.js/web/viewer.mjs" type="module"></script>-->
-    <!--#elif !MOZCENTRAL-->
+    <!--#if GENERIC || CHROME-->
     <!--<script src="viewer.mjs" type="module"></script>-->
-    <!--#elif /* Development mode. */-->
+    <!--#else-->
     <link rel="resource" type="application/l10n" href="locale/locale.json" />
 
     <script type="importmap">
@@ -319,9 +286,6 @@ See https://github.com/adobe-type-tools/cmap-resources
 
                 <div class="toolbarButtonSpacer"></div>
                 <div class="toolbarButtonWithContainer">
-                  <!--#if MOZCENTRAL-->
-                  <!--<button id="viewFindButton" class="toolbarButton hidden" type="button" tabindex="0" data-l10n-id="pdfjs-findbar-button" aria-expanded="false" aria-controls="findbar">-->
-                  <!--#else-->
                   <button
                     id="viewFindButton"
                     class="toolbarButton"
@@ -331,7 +295,6 @@ See https://github.com/adobe-type-tools/cmap-resources
                     aria-expanded="false"
                     aria-controls="findbar"
                   >
-                    <!--#endif-->
                     <span data-l10n-id="pdfjs-findbar-button-label"></span>
                   </button>
                   <div class="hidden doorHanger toolbarHorizontalGroup" id="findbar">
@@ -896,12 +859,6 @@ See https://github.com/adobe-type-tools/cmap-resources
           </div>
         </div>
 
-        <!--#if MOZCENTRAL-->
-        <!--<moz-message-bar id="pdfFeaturesNotification" type="info" role="region" aria-live="polite" dismissable hidden>
-          <span slot="message"><a role="link" tabindex="0" data-l10n-name="features-link"></a></span>
-        </moz-message-bar>-->
-        <!--#endif-->
-
         <div id="viewerContainer" tabindex="0">
           <div id="viewer" class="pdfViewer"></div>
         </div>
@@ -1305,7 +1262,6 @@ See https://github.com/adobe-type-tools/cmap-resources
           </div>
         </dialog>
 
-        <!--#if !MOZCENTRAL-->
         <dialog id="printServiceDialog">
           <div class="row">
             <span data-l10n-id="pdfjs-print-progress-message"></span>
@@ -1318,7 +1274,6 @@ See https://github.com/adobe-type-tools/cmap-resources
             <button id="printCancel" class="secondaryButton" type="button"><span data-l10n-id="pdfjs-print-progress-close-button"></span></button>
           </div>
         </dialog>
-        <!--#endif-->
         <!--#if CHROME-->
         <!--#include viewer-snippet-chrome-overlays.html-->
         <!--#endif-->

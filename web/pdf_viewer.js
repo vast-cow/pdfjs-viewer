@@ -70,7 +70,6 @@ import {
 import { internalOpt } from "./internal_evt.js";
 import { PDFPageView } from "./pdf_page_view.js";
 import { RenderingStates } from "./renderable_view.js";
-import { SimpleLinkService } from "./pdf_link_service.js";
 
 const CORE_VERSION = "6.5.438";
 const DEFAULT_CACHE_SIZE = 10;
@@ -144,7 +143,7 @@ function isValidAnnotationEditorMode(mode) {
  *   rendering will keep track of which areas of the page each PDF operation
  *   affects. Then, when rendering a partial page (if `enableDetailCanvas` is
  *   enabled), it will only run through the operations that affect that portion.
- * @property {L10n} [l10n] - Localization service.
+ * @property {L10n} l10n - Localization service.
  * @property {boolean} [enablePermissions] - Enables PDF document permissions,
  *   when they exist. The default value is `false`.
  * @property {object} [pageColors] - Overwrites background and foreground colors
@@ -338,7 +337,7 @@ class PDFViewer {
     this.#resizeObserver.observe(this.container);
 
     this.eventBus = options.eventBus;
-    this.linkService = options.linkService || new SimpleLinkService();
+    this.linkService = options.linkService;
     this.downloadManager = options.downloadManager || null;
     this.findController = options.findController || null;
     this.#altTextManager = options.altTextManager || null;
@@ -416,7 +415,6 @@ class PDFViewer {
       },
       internalOpt
     );
-
   }
 
   get printingAllowed() {
@@ -1005,14 +1003,8 @@ class PDFViewer {
               this.#mlManager,
               this.#editorUndoBar,
               this.#supportsPinchToZoom,
-              // GeckoView's toolbar sticks out of the editor.
-              typeof PDFJSDev === "undefined"
-                ? window.isGECKOVIEW
-                : PDFJSDev.test("GECKOVIEW"),
-              // GeckoView needs unselected signatures as buttons for TalkBack.
-              typeof PDFJSDev === "undefined"
-                ? window.isGECKOVIEW
-                : PDFJSDev.test("GECKOVIEW")
+              /* toolbarOutsideEditor = */ false,
+              /* useButtonsForUnselectedSignatures = */ false
             );
             eventBus.dispatch("annotationeditoruimanager", {
               source: this,
@@ -2281,15 +2273,6 @@ class PDFViewer {
    *   The constants from {ScrollMode} should be used.
    */
   set scrollMode(mode) {
-    if (
-      typeof PDFJSDev === "undefined"
-        ? window.isGECKOVIEW
-        : PDFJSDev.test("GECKOVIEW")
-    ) {
-      // NOTE: Always ignore the pageLayout in GeckoView since there's
-      // no UI available to change Scroll/Spread modes for the user.
-      return;
-    }
     if (this._scrollMode === mode) {
       return; // The Scroll mode didn't change.
     }
@@ -2352,15 +2335,6 @@ class PDFViewer {
    *   The constants from {SpreadMode} should be used.
    */
   set spreadMode(mode) {
-    if (
-      typeof PDFJSDev === "undefined"
-        ? window.isGECKOVIEW
-        : PDFJSDev.test("GECKOVIEW")
-    ) {
-      // NOTE: Always ignore the pageLayout in GeckoView since there's
-      // no UI available to change Scroll/Spread modes for the user.
-      return;
-    }
     if (this._spreadMode === mode) {
       return; // The Spread mode didn't change.
     }

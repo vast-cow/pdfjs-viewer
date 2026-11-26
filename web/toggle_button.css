@@ -2,14 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* The Firefox foundation tokens below are read with the shipped literal as the
-   fallback, so MOZCENTRAL tracks the design system (tokens-brand.css, linked
-   from viewer.html) while every other build keeps this self-contained
-   moz-toggle copy. Declaring those token names here instead would shadow
-   Firefox's (unlayered beats @layer), and a bare var() would both trip
-   stylelint's no-unknown-custom-properties and collapse the toggle to a
-   zero-size transparent element if the chrome sheet ever failed to load. */
-
 /*
     The original file is located at:
     https://hg.mozilla.org/mozilla-central/file/168f6caa3b160c12413f9e9ad9df1db49c6b4cdf/toolkit/content/widgets/moz-toggle/moz-toggle.css

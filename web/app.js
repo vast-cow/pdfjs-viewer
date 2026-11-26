@@ -42,7 +42,6 @@ import {
 import {
   AnnotationEditorType,
   build,
-  FeatureTest,
   getDocument,
   getFilenameFromUrl,
   getPdfFilenameFromUrl,
@@ -62,7 +61,7 @@ import {
 } from "pdfjs-dist";
 import { AppOptions, OptionKind } from "./app_options.js";
 import { createPromiseCapability, noopFn } from "./promise_utils.js";
-import { EventBus, FirefoxEventBus } from "./event_utils.js";
+import { EventBus } from "./event_utils.js";
 import { ExternalServices, initCom, MLManager } from "web-external_services";
 import {
   ImageAltTextSettings,
@@ -202,13 +201,10 @@ const PDFViewerApplication = {
   _isScrolling: false,
   editorUndoBar: null,
   _printPermissionPromise: null,
-  // Only used to keep the preloaded icons alive, see `_preloadIcons`.
-  _preloadedIcons: null,
 
   // Called once when the document is loaded.
   async initialize(appConfig) {
     this.appConfig = appConfig;
-    this._preloadIcons();
 
     // Ensure that `Preferences`, and indirectly `AppOptions`, have initialized
     // before creating e.g. the various viewer components.
@@ -244,17 +240,6 @@ const PDFViewerApplication = {
             ),
           }) || null;
       }
-    } else if (PDFJSDev.test("MOZCENTRAL")) {
-      if (AppOptions.get("enableAltText")) {
-        // We want to load the image-to-text AI engine as soon as possible.
-        this.mlManager = new MLManager({
-          enableGuessAltText: AppOptions.get("enableGuessAltText"),
-          enableAltTextModelDownload: AppOptions.get(
-            "enableAltTextModelDownload"
-          ),
-          altTextLearnMoreUrl: AppOptions.get("altTextLearnMoreUrl"),
-        });
-      }
     }
 
     // Ensure that the `L10n`-instance has been initialized before creating
@@ -262,9 +247,7 @@ const PDFViewerApplication = {
     this.l10n = await this.externalServices.createL10n();
     document.getElementsByTagName("html")[0].dir = this.l10n.getDirection();
     // Connect Fluent, when necessary, and translate what we already have.
-    if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
-      this.l10n.translate(appConfig.appContainer || document.documentElement);
-    }
+    this.l10n.translate(appConfig.appContainer || document.documentElement);
 
     if (
       this.isViewerEmbedded &&
@@ -283,64 +266,6 @@ const PDFViewerApplication = {
 
     this._initializedCapability.settled = true;
     this._initializedCapability.resolve();
-  },
-
-  _preloadIcons() {
-    if (
-      typeof PDFJSDev !== "undefined" &&
-      PDFJSDev.test("MOZCENTRAL && !GECKOVIEW") &&
-      !this._preloadedIcons
-    ) {
-      // CSS fetches icons when their elements are rendered. Use idle time
-      // during viewer startup or PDF loading to warm the cache for UI that
-      // starts out hidden. viewer.html preloads the icons visible on startup.
-      // NOTE: When modifying the icons used in the toolbars or in the views
-      // manager, please keep this list and the viewer.html one in sync.
-      this._preloadedIcons = [];
-      window.requestIdleCallback(() => {
-        const path = AppOptions.get("imageResourcesPath");
-        for (const name of [
-          // Secondary toolbar, which also contains the print and download
-          // buttons when the window is narrow (see the `hiddenMediumView`
-          // class in viewer.css).
-          "toolbarButton-print.svg",
-          "toolbarButton-download.svg",
-          "toolbarButton-presentationMode.svg",
-          "toolbarButton-bookmark.svg",
-          "secondaryToolbarButton-firstPage.svg",
-          "secondaryToolbarButton-lastPage.svg",
-          "secondaryToolbarButton-rotateCw.svg",
-          "secondaryToolbarButton-rotateCcw.svg",
-          "secondaryToolbarButton-selectTool.svg",
-          "secondaryToolbarButton-handTool.svg",
-          "secondaryToolbarButton-scrollPage.svg",
-          "secondaryToolbarButton-scrollVertical.svg",
-          "secondaryToolbarButton-scrollHorizontal.svg",
-          "secondaryToolbarButton-scrollWrapped.svg",
-          "secondaryToolbarButton-spreadNone.svg",
-          "secondaryToolbarButton-spreadOdd.svg",
-          "secondaryToolbarButton-spreadEven.svg",
-          "secondaryToolbarButton-documentProperties.svg",
-          // Views manager (see views_manager.css) and its menu.
-          "pages_viewButton.svg",
-          "pages_viewArrow.svg",
-          "checkmark.svg",
-          "toolbarButton-viewOutline.svg",
-          "toolbarButton-viewAttachments.svg",
-          "toolbarButton-viewLayers.svg",
-          "pages_closeButton.svg",
-          "altText_spinner.svg",
-          "altText_done.svg",
-        ]) {
-          const image = new Image();
-          image.src = path + name;
-          // The images are never read: keeping a reference to them prevents
-          // their entries, which expire when unused, from being evicted from
-          // the image cache before the icons are displayed.
-          this._preloadedIcons.push(image);
-        }
-      });
-    }
   },
 
   /**
@@ -480,14 +405,7 @@ const PDFViewerApplication = {
     const { appConfig, externalServices, l10n, mlManager } = this;
     const abortSignal = this._globalAbortController.signal;
 
-    const eventBus =
-      typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-        ? new FirefoxEventBus(
-            AppOptions.get("allowedGlobalEvents"),
-            externalServices,
-            AppOptions.get("isInAutomation")
-          )
-        : new EventBus();
+    const eventBus = new EventBus();
     this.eventBus = AppOptions.eventBus = eventBus;
 
     mlManager?.setEventBus(eventBus, abortSignal);
@@ -518,10 +436,6 @@ const PDFViewerApplication = {
     const findController = (this.findController = new PDFFindController({
       linkService,
       eventBus,
-      updateMatchesCountOnProgress:
-        typeof PDFJSDev === "undefined"
-          ? !window.isGECKOVIEW
-          : !PDFJSDev.test("GECKOVIEW"),
     }));
 
     const pdfScriptingManager = (this.pdfScriptingManager =
@@ -533,12 +447,7 @@ const PDFViewerApplication = {
 
     const container = appConfig.mainContainer,
       viewer = appConfig.viewerContainer;
-    const annotationEditorMode =
-      (typeof PDFJSDev === "undefined"
-        ? window.isGECKOVIEW
-        : PDFJSDev.test("GECKOVIEW")) && !AppOptions.get("enableAndroidEditing")
-        ? AnnotationEditorType.DISABLE
-        : AppOptions.get("annotationEditorMode");
+    const annotationEditorMode = AppOptions.get("annotationEditorMode");
     const hasForcedColors =
       AppOptions.get("forcePageColors") ||
       window.matchMedia("(forced-colors: active)").matches;
@@ -574,139 +483,17 @@ const PDFViewerApplication = {
       this.editorUndoBar = new EditorUndoBar(appConfig.editorUndoBar, eventBus);
     }
 
-    if (
-      (typeof PDFJSDev === "undefined" ||
-        PDFJSDev.test("MOZCENTRAL && !GECKOVIEW")) &&
-      !this.isViewerEmbedded &&
-      appConfig.featuresNotification &&
-      !AppOptions.get("featuresNotificationDismissed")
-    ) {
-      const { featuresNotification } = appConfig;
-      let barResizeObserver = null,
-        dismissed = false;
-      const hideBar = () => {
-        dismissed = true;
-        barResizeObserver?.disconnect();
-        barResizeObserver = null;
-        docStyle.setProperty("--pfn-bar-height", "0px");
-        featuresNotification.hidden = true;
-      };
-      // Handle dismissal while the notification is loading.
-      eventBus.on(
-        "featuresnotificationdismissed",
-        ({ value }) => {
-          if (value) {
-            hideBar();
-          }
-        },
-        { signal: abortSignal, ...internalOpt }
-      );
-
-      const showFeaturesNotification = async () => {
-        if (AppOptions.get("featuresNotificationDismissed")) {
-          return;
-        }
-        // Register the resources before the widget connects its l10n root.
-        document.l10n.addResourceIds([
-          "branding/brand.ftl",
-          "toolkit/global/mozMessageBar.ftl",
-          "toolkit/about/pdfFeaturesNotification.ftl",
-        ]);
-        await __raw_import__(
-          "chrome://global/content/elements/moz-message-bar.mjs"
-        );
-        // Set the l10n ids after registering their resources to avoid an
-        // initial translation error.
-        const message = featuresNotification.querySelector("[slot='message']");
-        featuresNotification.setAttribute(
-          "data-l10n-id",
-          "pdf-features-notification"
-        );
-        message.setAttribute(
-          "data-l10n-id",
-          "pdf-features-notification-message"
-        );
-        await document.l10n.translateElements([featuresNotification, message]);
-        if (dismissed || AppOptions.get("featuresNotificationDismissed")) {
-          return;
-        }
-
-        // The link has no href on purpose: about:pdf cannot be loaded from
-        // content, so the parent process opens it when asked (bug 2071624).
-        const openFeatures = event => {
-          if (event.target.closest("a")) {
-            externalServices.openAboutPdfFeatures();
-          }
-        };
-        featuresNotification.addEventListener("click", openFeatures, {
-          signal: abortSignal,
-        });
-        featuresNotification.addEventListener(
-          "keydown",
-          event => {
-            if (event.key === "Enter") {
-              openFeatures(event);
-            }
-          },
-          { signal: abortSignal }
-        );
-
-        barResizeObserver = new ResizeObserver(entries => {
-          const box = entries[0]?.borderBoxSize?.[0];
-          const height = box
-            ? box.blockSize
-            : (entries[0]?.contentRect.height ?? 0);
-          docStyle.setProperty("--pfn-bar-height", `${Math.ceil(height)}px`);
-        });
-        barResizeObserver.observe(featuresNotification);
-
-        featuresNotification.addEventListener(
-          "message-bar:user-dismissed",
-          () => {
-            // Move focus before the bar removes itself.
-            if (featuresNotification.matches(":focus-within")) {
-              container.focus();
-            }
-            hideBar();
-            this.preferences.set("featuresNotificationDismissed", true);
-          },
-          { once: true }
-        );
-        featuresNotification.hidden = false;
-      };
-      // Load the notification after the first page renders (bug 2072145).
-      eventBus.on(
-        "pagerendered",
-        () => {
-          showFeaturesNotification().catch(ex => {
-            console.error(`Cannot show the features notification: "${ex}".`);
-          });
-        },
-        { once: true, signal: abortSignal, ...internalOpt }
-      );
-    }
-
     let signatureManager = null;
-    if (AppOptions.get("enableSignatureEditor")) {
-      if (
-        typeof PDFJSDev === "undefined"
-          ? window.isGECKOVIEW
-          : PDFJSDev.test("GECKOVIEW")
-      ) {
-        if (annotationEditorMode !== AnnotationEditorType.DISABLE) {
-          signatureManager = new SignatureManager(eventBus, abortSignal);
-        }
-      } else if (appConfig.addSignatureDialog) {
-        signatureManager = new SignatureManager(
-          appConfig.addSignatureDialog,
-          appConfig.editSignatureDialog,
-          appConfig.annotationEditorParams?.editorSignatureAddSignature || null,
-          overlayManager,
-          l10n,
-          externalServices.createSignatureStorage(eventBus, abortSignal),
-          eventBus
-        );
-      }
+    if (AppOptions.get("enableSignatureEditor") && appConfig.addSignatureDialog) {
+      signatureManager = new SignatureManager(
+        appConfig.addSignatureDialog,
+        appConfig.editSignatureDialog,
+        appConfig.annotationEditorParams?.editorSignatureAddSignature || null,
+        overlayManager,
+        l10n,
+        externalServices.createSignatureStorage(eventBus, abortSignal),
+        eventBus
+      );
     }
 
     const commentManager =
@@ -880,8 +667,6 @@ const PDFViewerApplication = {
       );
     }
 
-    // NOTE: The cursor-tools are unlikely to be helpful/useful in GeckoView,
-    // in particular the `HandTool` which basically simulates touch scrolling.
     if (appConfig.secondaryToolbar?.cursorHandToolButton) {
       this.pdfCursorTools = new PDFCursorTools({
         container,
@@ -891,27 +676,11 @@ const PDFViewerApplication = {
     }
 
     if (appConfig.toolbar) {
-      if (
-        typeof PDFJSDev === "undefined"
-          ? window.isGECKOVIEW
-          : PDFJSDev.test("GECKOVIEW")
-      ) {
-        const nimbusData = JSON.parse(
-          AppOptions.get("nimbusDataStr") || "null"
-        );
-        this.toolbar = new Toolbar(
-          appConfig.toolbar,
-          eventBus,
-          nimbusData,
-          AppOptions.get("enableAndroidEditing")
-        );
-      } else {
-        this.toolbar = new Toolbar(
-          appConfig.toolbar,
-          eventBus,
-          AppOptions.get("toolbarDensity")
-        );
-      }
+      this.toolbar = new Toolbar(
+        appConfig.toolbar,
+        eventBus,
+        AppOptions.get("toolbarDensity")
+      );
     }
 
     if (appConfig.secondaryToolbar) {
@@ -1001,10 +770,7 @@ const PDFViewerApplication = {
       };
     }
 
-    if (
-      typeof PDFJSDev === "undefined" ||
-      PDFJSDev.test("TESTING || MOZCENTRAL")
-    ) {
+    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       this.pdfTextExtractor = new PdfTextExtractor(
         externalServices,
         pdfViewer,
@@ -1030,8 +796,6 @@ const PDFViewerApplication = {
       // parameters from the *viewer* URL (issue 19990).
       file = URL.parse(file)?.href ?? file.replaceAll("#", "%23");
       validateFileURL(file);
-    } else if (PDFJSDev.test("MOZCENTRAL")) {
-      file = window.location.href;
     } else if (PDFJSDev.test("CHROME")) {
       file = AppOptions.get("defaultUrl");
     }
@@ -1121,7 +885,7 @@ const PDFViewerApplication = {
       } else {
         this._hideViewBookmark();
       }
-    } else if (PDFJSDev.test("MOZCENTRAL || CHROME")) {
+    } else if (PDFJSDev.test("CHROME")) {
       this.setTitleUsingUrl(file, /* downloadUrl = */ file);
 
       this.externalServices.initPassiveLoading();
@@ -1298,10 +1062,7 @@ const PDFViewerApplication = {
     }
     if (isDataScheme(url)) {
       this._hideViewBookmark();
-    } else if (
-      typeof PDFJSDev !== "undefined" &&
-      PDFJSDev.test("MOZCENTRAL || CHROME")
-    ) {
+    } else if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")) {
       AppOptions.set("docBaseUrl", this.baseUrl);
     }
 
@@ -1456,12 +1217,7 @@ const PDFViewerApplication = {
 
     if (args.data && isPdfFile(args.filename)) {
       this._contentDispositionFilename = args.filename;
-    } else if (
-      (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) &&
-      args.url
-    ) {
-      // The Firefox built-in viewer always calls `setTitleUsingUrl`, before
-      // `initPassiveLoading`, and it never provides an `originalUrl` here.
+    } else if (args.url) {
       this.setTitleUsingUrl(
         args.originalUrl || args.url,
         /* downloadUrl = */ args.url
@@ -1731,18 +1487,7 @@ const PDFViewerApplication = {
     this._printPermissionPromise = new Promise(resolve => {
       this.eventBus.on(
         "printingallowed",
-        ({ isAllowed }) => {
-          if (
-            typeof PDFJSDev !== "undefined" &&
-            PDFJSDev.test("MOZCENTRAL") &&
-            !isAllowed
-          ) {
-            window.print = () => {
-              console.warn("Printing is not allowed.");
-            };
-          }
-          resolve(isAllowed);
-        },
+        ({ isAllowed }) => resolve(isAllowed),
         { once: true, ...internalOpt }
       );
     });
@@ -2166,13 +1911,6 @@ const PDFViewerApplication = {
    * @private
    */
   async _initializePageLabels(pdfDocument) {
-    if (
-      typeof PDFJSDev === "undefined"
-        ? window.isGECKOVIEW
-        : PDFJSDev.test("GECKOVIEW")
-    ) {
-      return;
-    }
     const labels = await pdfDocument.getPageLabels();
 
     if (pdfDocument !== this.pdfDocument) {
@@ -2442,13 +2180,7 @@ const PDFViewerApplication = {
     const ac = (this._eventBusAC = new AbortController());
     const opts = { signal: ac.signal, ...internalOpt };
 
-    const {
-      eventBus,
-      externalServices,
-      pdfDocumentProperties,
-      pdfViewer,
-      preferences,
-    } = this;
+    const { eventBus, pdfDocumentProperties, pdfViewer, preferences } = this;
 
     eventBus.on("resize", onResize.bind(this), opts);
     eventBus.on("hashchange", onHashchange.bind(this), opts);
@@ -2546,22 +2278,7 @@ const PDFViewerApplication = {
       eventBus.on("fileinputchange", onFileInputChange.bind(this), opts);
       eventBus.on("openfile", onOpenFile.bind(this), opts);
     }
-    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")) {
-      eventBus.on(
-        "editingstateschanged",
-        evt => externalServices.updateEditorStates(evt),
-        opts
-      );
-      eventBus.on(
-        "reporttelemetry",
-        evt => externalServices.reportTelemetry(evt.details),
-        opts
-      );
-    }
-    if (
-      typeof PDFJSDev === "undefined" ||
-      PDFJSDev.test("TESTING || MOZCENTRAL")
-    ) {
+    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       eventBus.on(
         "setpreference",
         evt => preferences.set(evt.name, evt.value),
@@ -2656,26 +2373,19 @@ const PDFViewerApplication = {
       signal,
     });
 
-    if (
-      (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) &&
-      !("onscrollend" in document.documentElement)
-    ) {
+    if (!("onscrollend" in document.documentElement)) {
       return;
     }
-    if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
-      // Using the values lastScrollTop and lastScrollLeft is a workaround to
-      // https://bugzilla.mozilla.org/show_bug.cgi?id=1881974.
-      // TODO: remove them once the bug is fixed.
-      ({ scrollTop: this._lastScrollTop, scrollLeft: this._lastScrollLeft } =
-        mainContainer);
-    }
+    // Using the values lastScrollTop and lastScrollLeft is a workaround to
+    // https://bugzilla.mozilla.org/show_bug.cgi?id=1881974.
+    // TODO: remove them once the bug is fixed.
+    ({ scrollTop: this._lastScrollTop, scrollLeft: this._lastScrollLeft } =
+      mainContainer);
 
     let scrollendTimeoutID, scrollAbortController;
     const scrollend = () => {
-      if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) {
-        ({ scrollTop: this._lastScrollTop, scrollLeft: this._lastScrollLeft } =
-          mainContainer);
-      }
+      ({ scrollTop: this._lastScrollTop, scrollLeft: this._lastScrollLeft } =
+        mainContainer);
       clearTimeout(scrollendTimeoutID);
       if (this._isScrolling) {
         scrollAbortController.abort();
@@ -2688,7 +2398,6 @@ const PDFViewerApplication = {
         return;
       }
       if (
-        (typeof PDFJSDev === "undefined" || !PDFJSDev.test("MOZCENTRAL")) &&
         this._lastScrollTop === mainContainer.scrollTop &&
         this._lastScrollLeft === mainContainer.scrollLeft
       ) {
@@ -3196,16 +2905,12 @@ function onWheel(evt) {
   // https://searchfox.org/mozilla-central/rev/d62c4c4d5547064487006a1506287da394b64724/widget/InputData.cpp#618-626
   let scaleFactor = Math.exp(-evt.deltaY / 100);
 
-  const isBuiltInMac =
-    typeof PDFJSDev !== "undefined" &&
-    PDFJSDev.test("MOZCENTRAL") &&
-    FeatureTest.platform.isMac;
   const isPinchToZoom =
     evt.ctrlKey &&
     !this._isCtrlKeyDown &&
     deltaMode === WheelEvent.DOM_DELTA_PIXEL &&
     evt.deltaX === 0 &&
-    (Math.abs(scaleFactor - 1) < 0.05 || isBuiltInMac) &&
+    Math.abs(scaleFactor - 1) < 0.05 &&
     evt.deltaZ === 0;
   const origin = [evt.clientX, evt.clientY];
 
