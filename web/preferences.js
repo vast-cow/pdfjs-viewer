@@ -47,10 +47,7 @@ class BasePreferences {
       }
     );
 
-    if (
-      typeof PDFJSDev === "undefined" ||
-      PDFJSDev.test("TESTING && !LIB")
-    ) {
+    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING && !LIB")) {
       window.addEventListener(
         "updatedPreference",
         async ({ detail: { name, value } }) => {

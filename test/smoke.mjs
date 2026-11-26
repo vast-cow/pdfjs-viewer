@@ -148,12 +148,23 @@ async function runSmokeTests(browser, base) {
       });
       assert.deepEqual(errors, []);
       console.log("PASS render, search, annotation save and print", viewerPath);
+      await page.close();
 
-      await page.goto(base + "/test/");
-      await page.setContent('<iframe width="760" height="500"></iframe>');
-      const iframe = await page.waitForSelector("iframe");
+      const embedPage = await browser.newPage();
+      embedPage.on("pageerror", error => errors.push(error.message));
+      await embedPage.goto(base + "/test/");
+      await embedPage.evaluate(
+        src => {
+          const iframe = document.createElement("iframe");
+          iframe.src = src;
+          iframe.width = "760";
+          iframe.height = "500";
+          document.body.replaceChildren(iframe);
+        },
+        base + viewerPath + "?file=" + input
+      );
+      const iframe = await embedPage.waitForSelector("iframe");
       const viewerFrame = await iframe.contentFrame();
-      await viewerFrame.goto(base + viewerPath + "?file=" + input);
       await viewerFrame.waitForFunction(
         () =>
           window.PDFViewerApplication?.isViewerEmbedded &&
@@ -164,7 +175,7 @@ async function runSmokeTests(browser, base) {
       });
       assert.deepEqual(errors, []);
       console.log("PASS embedded full viewer", viewerPath);
-      await page.close();
+      await embedPage.close();
     }
 
     const extensionId = await browser.installExtension(

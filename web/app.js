@@ -61,7 +61,6 @@ import {
 } from "pdfjs-dist";
 import { AppOptions, OptionKind } from "./app_options.js";
 import { createPromiseCapability, noopFn } from "./promise_utils.js";
-import { EventBus } from "./event_utils.js";
 import { ExternalServices, initCom, MLManager } from "web-external_services";
 import {
   ImageAltTextSettings,
@@ -74,6 +73,7 @@ import { CaretBrowsingMode } from "./caret_browsing.js";
 import { CommentManager } from "./comment_manager.js";
 import { DownloadManager } from "web-download_manager";
 import { EditorUndoBar } from "./editor_undo_bar.js";
+import { EventBus } from "./event_utils.js";
 import { internalOpt } from "./internal_evt.js";
 import { OverlayManager } from "./overlay_manager.js";
 import { PasswordPrompt } from "./password_prompt.js";
@@ -484,7 +484,10 @@ const PDFViewerApplication = {
     }
 
     let signatureManager = null;
-    if (AppOptions.get("enableSignatureEditor") && appConfig.addSignatureDialog) {
+    if (
+      AppOptions.get("enableSignatureEditor") &&
+      appConfig.addSignatureDialog
+    ) {
       signatureManager = new SignatureManager(
         appConfig.addSignatureDialog,
         appConfig.editSignatureDialog,
