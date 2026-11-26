@@ -16,15 +16,17 @@
 /** @typedef {import("./event_utils.js").EventBus} EventBus */
 // eslint-disable-next-line max-len
 /** @typedef {import("./download_manager.js").DownloadManager} DownloadManager */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/api.js").PDFDocumentProxy} PDFDocumentProxy */
+
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
 
 /**
- * @import { CatalogAttachmentContent } from "../src/core/catalog.js";
+ * @import {
+ *   CatalogAttachmentContent,
+ * } from "pdfjs-dist/types/src/core/catalog.js";
  */
 
 import { BaseTreeViewer } from "./base_tree_viewer.js";
-import { createPromiseCapability } from "pdfjs-lib";
+import { createPromiseCapability } from "./promise_utils.js";
 import { internalOpt } from "./internal_evt.js";
 import { SidebarView } from "./ui_utils.js";
 

@@ -613,15 +613,6 @@ const defaultOptions = new Map([
     },
   ],
   [
-    "newTextLayerMode",
-    {
-      // 1 to enable, 2 to enable with the glyph boxes drawn, else disabled.
-      /** @type {number} */
-      value: 1,
-      kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
-    },
-  ],
-  [
     "forcePageColors",
     {
       /** @type {boolean} */
@@ -689,7 +680,7 @@ const defaultOptions = new Map([
             /** @type {string} */
             value:
               typeof PDFJSDev === "undefined"
-                ? "../build/dev-sandbox/pdf.sandbox.mjs"
+                ? "../node_modules/pdfjs-dist/build/pdf.sandbox.mjs"
                 : "../build/pdf.sandbox.mjs",
             kind: OptionKind.VIEWER,
           },
@@ -762,7 +753,7 @@ const defaultOptions = new Map([
       value:
         // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
-          ? "../external/bcmaps/"
+          ? "../node_modules/pdfjs-dist/cmaps/"
           : PDFJSDev.test("MOZCENTRAL")
             ? "resource://pdf.js/web/cmaps/"
             : "../web/cmaps/",
@@ -862,7 +853,7 @@ const defaultOptions = new Map([
       value:
         // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
-          ? "../external/iccs/"
+          ? "../node_modules/pdfjs-dist/iccs/"
           : PDFJSDev.test("MOZCENTRAL")
             ? "resource://pdf.js/web/iccs/"
             : "../web/iccs/",
@@ -884,7 +875,7 @@ const defaultOptions = new Map([
       value:
         // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
-          ? "../external/hellbox/"
+          ? "../node_modules/pdfjs-dist/standard_fonts/"
           : PDFJSDev.test("MOZCENTRAL")
             ? "resource://pdf.js/web/standard_fonts/"
             : "../web/standard_fonts/",
@@ -921,9 +912,12 @@ const defaultOptions = new Map([
     {
       /** @type {string} */
       value:
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("MOZCENTRAL")
-          ? "resource://pdf.js/web/wasm/"
-          : "../web/wasm/",
+        // eslint-disable-next-line no-nested-ternary
+        typeof PDFJSDev === "undefined"
+          ? "../node_modules/pdfjs-dist/wasm/"
+          : PDFJSDev.test("MOZCENTRAL")
+            ? "resource://pdf.js/web/wasm/"
+            : "../web/wasm/",
       kind: OptionKind.API,
     },
   ],
@@ -948,7 +942,7 @@ const defaultOptions = new Map([
       value:
         // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
-          ? "../src/pdf.renderer.js"
+          ? "../node_modules/pdfjs-dist/build/pdf.renderer.mjs"
           : PDFJSDev.test("MOZCENTRAL")
             ? "resource://pdf.js/build/pdf.renderer.mjs"
             : "../build/pdf.renderer.mjs",
@@ -973,7 +967,7 @@ const defaultOptions = new Map([
       value:
         // eslint-disable-next-line no-nested-ternary
         typeof PDFJSDev === "undefined"
-          ? "../src/pdf.worker.js"
+          ? "../node_modules/pdfjs-dist/build/pdf.worker.mjs"
           : PDFJSDev.test("MOZCENTRAL")
             ? "resource://pdf.js/build/pdf.worker.mjs"
             : "../build/pdf.worker.mjs",

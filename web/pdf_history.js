@@ -18,7 +18,7 @@
 
 import { isValidRotation, parseQueryString } from "./ui_utils.js";
 import { internalOpt } from "./internal_evt.js";
-import { updateUrlHash } from "pdfjs-lib";
+import { updateUrlHash } from "pdfjs-dist";
 import { waitOnEventOrTimeout } from "./event_utils.js";
 
 // Heuristic value used when force-resetting `this._blockHashChange`.

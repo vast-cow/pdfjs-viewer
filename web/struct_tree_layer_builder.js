@@ -13,15 +13,10 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
 
-import {
-  createPromiseCapability,
-  FeatureTest,
-  getUuid,
-  makeMap,
-  shadow,
-} from "pdfjs-lib";
+import { FeatureTest, getUuid, makeMap, shadow } from "pdfjs-dist";
+import { createPromiseCapability } from "./promise_utils.js";
 import { removeNullCharacters } from "./ui_utils.js";
 
 const PDF_ROLE_TO_HTML_ROLE = {

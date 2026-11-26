@@ -20,7 +20,7 @@ import {
   FeatureTest,
   getRGBA,
   Util,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 
 /**

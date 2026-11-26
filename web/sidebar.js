@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { noContextMenu, stopEvent } from "pdfjs-lib";
+import { noContextMenu, stopEvent } from "pdfjs-dist";
 
 // Timeout before ending resize operation.
 const RESIZE_TIMEOUT = 400; // ms

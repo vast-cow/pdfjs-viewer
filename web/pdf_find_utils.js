@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { FeatureTest } from "pdfjs-lib";
+import { FeatureTest } from "pdfjs-dist";
 
 let wordSegmenter = null;
 let graphemeSegmenter = null;

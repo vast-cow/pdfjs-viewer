@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { PixelsPerInch, XfaLayer } from "pdfjs-lib";
+import { PixelsPerInch, XfaLayer } from "pdfjs-dist";
 import { SimpleLinkService } from "./pdf_link_service.js";
 import { XfaLayerBuilder } from "./xfa_layer_builder.js";
 

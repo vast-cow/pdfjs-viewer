@@ -13,16 +13,16 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
+
+/** @typedef {import("pdfjs-dist").PageViewport} PageViewport */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/page_viewport").PageViewport} PageViewport */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/text_layer_images.js").TextLayerImages} TextLayerImages */
+/** @typedef {import("pdfjs-dist/types/src/display/text_layer_images.js").TextLayerImages} TextLayerImages */
 /** @typedef {import("./text_highlighter").TextHighlighter} TextHighlighter */
 // eslint-disable-next-line max-len
 /** @typedef {import("./text_accessibility.js").TextAccessibilityManager} TextAccessibilityManager */
 
-import { normalizeUnicode, stopEvent, TextLayer } from "pdfjs-lib";
+import { normalizeUnicode, stopEvent, TextLayer } from "pdfjs-dist";
 import { removeNullCharacters } from "./ui_utils.js";
 
 /**
@@ -32,8 +32,6 @@ import { removeNullCharacters } from "./ui_utils.js";
  *   highlighting text from the find controller.
  * @property {TextAccessibilityManager} [accessibilityManager]
  * @property {boolean} [enablePermissions]
- * @property {number} [newTextLayerMode] - 1 to use the text layer fonts, 2 to
- *   use them with their glyph boxes drawn in red.
  * @property {Function} [onAppend]
  * @property {AbortSignal} [abortSignal]
  */
@@ -77,7 +75,6 @@ class TextLayerBuilder {
     highlighter = null,
     accessibilityManager = null,
     enablePermissions = false,
-    newTextLayerMode = 0,
     onAppend = null,
     abortSignal = null,
   }) {
@@ -85,12 +82,9 @@ class TextLayerBuilder {
     this.highlighter = highlighter;
     this.accessibilityManager = accessibilityManager;
     this.#enablePermissions = enablePermissions === true;
-    const debugTextLayerFonts = newTextLayerMode === 2;
     this.#textContentParams = {
       includeMarkedContent: true,
       disableNormalization: true,
-      includeTextLayerFonts: newTextLayerMode === 1 || debugTextLayerFonts,
-      debugTextLayerFonts,
     };
     this.#onAppend = onAppend;
     this.#abortSignal = abortSignal;
@@ -98,9 +92,6 @@ class TextLayerBuilder {
     this.div = document.createElement("div");
     this.div.tabIndex = 0;
     this.div.className = "textLayer";
-    if (debugTextLayerFonts) {
-      this.div.classList.add("debugFonts");
-    }
   }
 
   /**

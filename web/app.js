@@ -13,10 +13,9 @@
  * limitations under the License.
  */
 
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/api.js").PDFDocumentProxy} PDFDocumentProxy */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/api.js").PDFDocumentLoadingTask} PDFDocumentLoadingTask */
+/** @typedef {import("pdfjs-dist").PDFDocumentLoadingTask} PDFDocumentLoadingTask */
 
 import {
   animationStarted,
@@ -43,7 +42,6 @@ import {
 import {
   AnnotationEditorType,
   build,
-  createPromiseCapability,
   FeatureTest,
   getDocument,
   getFilenameFromUrl,
@@ -53,7 +51,6 @@ import {
   isDataScheme,
   isPdfFile,
   MathClamp,
-  noopFn,
   OutputScale,
   PDFWorker,
   ResponseException,
@@ -62,8 +59,9 @@ import {
   TouchManager,
   updateUrlHash,
   version,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import { AppOptions, OptionKind } from "./app_options.js";
+import { createPromiseCapability, noopFn } from "./promise_utils.js";
 import { EventBus, FirefoxEventBus } from "./event_utils.js";
 import { ExternalServices, initCom, MLManager } from "web-external_services";
 import {
@@ -375,7 +373,7 @@ const PDFViewerApplication = {
         GlobalWorkerOptions.workerSrc ||= AppOptions.get("workerSrc");
 
         typeof PDFJSDev === "undefined" // eslint-disable-line no-unused-expressions
-          ? await import("pdfjs/pdf.worker.js")
+          ? await import(PDFWorker.workerSrc) // eslint-disable-line no-unsanitized/method
           : await __raw_import__(PDFWorker.workerSrc);
 
         // Ensure that the "fake" worker won't be ignored.
@@ -432,7 +430,6 @@ const PDFViewerApplication = {
       disableHistory: x => x === "true",
       disableRange: x => x === "true",
       disableStream: x => x === "true",
-      newTextLayerMode: x => x | 0,
       verbosity: x => x | 0,
     };
 
@@ -767,7 +764,6 @@ const PDFViewerApplication = {
         AppOptions.get("enableScripting") && pdfScriptingManager,
       l10n,
       textLayerMode: AppOptions.get("textLayerMode"),
-      newTextLayerMode: AppOptions.get("newTextLayerMode"),
       annotationMode: AppOptions.get("annotationMode"),
       annotationEditorMode,
       annotationEditorHighlightColors: AppOptions.get("highlightEditorColors"),
@@ -1492,11 +1488,17 @@ const PDFViewerApplication = {
     }
 
     // Set the necessary API parameters, using all the available options.
-    const apiParams = AppOptions.getAll(OptionKind.API);
-    const loadingTask = getDocument({
-      ...apiParams,
-      ...args,
-    });
+    const apiParams = { ...AppOptions.getAll(OptionKind.API), ...args };
+    // The distribution resolves relative asset URLs from its own module.
+    for (const name of [
+      "cMapUrl",
+      "iccUrl",
+      "standardFontDataUrl",
+      "wasmUrl",
+    ]) {
+      apiParams[name] &&= new URL(apiParams[name], document.baseURI).href;
+    }
+    const loadingTask = getDocument(apiParams);
     this.pdfLoadingTask = loadingTask;
 
     loadingTask.onPassword = (updateCallback, reason) => {
@@ -1592,11 +1594,7 @@ const PDFViewerApplication = {
       } else {
         await this.pdfScriptingManager.dispatchWillSave();
       }
-      const data = await pdfDocument.saveDocument({
-        printToPDF: this.externalServices.printToPDF,
-        flatten,
-        intent,
-      });
+      const data = await pdfDocument.saveDocument();
       this.downloadManager.download(
         data,
         this._downloadUrl,
@@ -2829,10 +2827,7 @@ const PDFViewerApplication = {
       ) {
         return;
       }
-      modifiedPdfBytes = await pdfDocument.extractPages(pageInfos, copyLevels, {
-        flatten,
-        intent,
-      });
+      modifiedPdfBytes = await pdfDocument.extractPages(pageInfos, copyLevels);
     } finally {
       if (isPrinting && pdfDocument === this.pdfDocument) {
         await this.pdfScriptingManager.dispatchDidPrint();

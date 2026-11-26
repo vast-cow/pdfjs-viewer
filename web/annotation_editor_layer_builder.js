@@ -13,19 +13,19 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
+
+/** @typedef {import("pdfjs-dist").PageViewport} PageViewport */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/page_viewport").PageViewport} PageViewport */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/editor/tools.js").AnnotationEditorUIManager} AnnotationEditorUIManager */
+/** @typedef {import("pdfjs-dist").AnnotationEditorUIManager} AnnotationEditorUIManager */
 // eslint-disable-next-line max-len
 /** @typedef {import("./text_accessibility.js").TextAccessibilityManager} TextAccessibilityManager */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/annotation_layer.js").AnnotationLayer} AnnotationLayer */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
 
-import { AnnotationEditorLayer } from "pdfjs-lib";
+/** @typedef {import("pdfjs-dist").AnnotationLayer} AnnotationLayer */
+// eslint-disable-next-line max-len
+/** @typedef {import("./struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
+
+import { AnnotationEditorLayer } from "pdfjs-dist";
 import { GenericL10n } from "web-null_l10n";
 
 /**

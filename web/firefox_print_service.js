@@ -18,7 +18,7 @@ import {
   PixelsPerInch,
   RenderingCancelledException,
   shadow,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import {
   BasePrintServiceFactory,
   getXfaHtmlForPrinting,

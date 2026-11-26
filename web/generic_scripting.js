@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { getPdfFilenameFromUrl } from "pdfjs-lib";
+import { getPdfFilenameFromUrl } from "pdfjs-dist";
 
 async function docProperties(pdfDocument) {
   const url = "",
@@ -43,7 +43,7 @@ class GenericScripting {
       sandbox
         .then(pdfjsSandbox => {
           resolve(
-            pdfjsSandbox.QuickJSSandbox(new URL(wasmUrl, location.href).href)
+            pdfjsSandbox.QuickJSSandbox(new URL(wasmUrl, document.baseURI).href)
           );
         })
         .catch(reject);

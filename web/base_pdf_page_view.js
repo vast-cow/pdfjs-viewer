@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { FeatureTest, RenderingCancelledException } from "pdfjs-lib";
+import { FeatureTest, RenderingCancelledException } from "pdfjs-dist";
 import { RenderableView, RenderingStates } from "./renderable_view.js";
 
 class BasePDFPageView extends RenderableView {

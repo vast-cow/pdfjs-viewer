@@ -20,7 +20,7 @@ import {
   SignatureExtractor,
   stopEvent,
   SupportedImageMimeTypes,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 
 // Default height of the added signature in page coordinates.

@@ -15,16 +15,15 @@
 
 import {
   AnnotationMode,
-  createPromiseCapability,
-  noopFn,
   PixelsPerInch,
   RenderingCancelledException,
   shadow,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import {
   BasePrintServiceFactory,
   getXfaHtmlForPrinting,
 } from "./print_utils.js";
+import { createPromiseCapability, noopFn } from "./promise_utils.js";
 
 let activeService = null;
 let dialog = null;

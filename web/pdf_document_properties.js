@@ -15,12 +15,13 @@
 
 /** @typedef {import("./event_utils.js").EventBus} EventBus */
 /** @typedef {import("./overlay_manager.js").OverlayManager} OverlayManager */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/api.js").PDFDocumentProxy} PDFDocumentProxy */
 
-import { createPromiseCapability, PDFDateString } from "pdfjs-lib";
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
+
 import { getPageSizeInches, isPortraitOrientation } from "./ui_utils.js";
+import { createPromiseCapability } from "./promise_utils.js";
 import { internalOpt } from "./internal_evt.js";
+import { PDFDateString } from "pdfjs-dist";
 
 // See https://en.wikibooks.org/wiki/Lentis/Conversion_to_the_Metric_Standard_in_the_United_States
 const NON_METRIC_LOCALES = ["en-us", "en-lr", "my"];

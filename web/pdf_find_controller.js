@@ -13,13 +13,13 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFDocumentProxy} PDFDocumentProxy */
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
 /** @typedef {import("./event_utils").EventBus} EventBus */
 /** @typedef {import("./pdf_link_service.js").PDFLinkService} PDFLinkService */
 
 import { getNormalizeWithNFKC, isEntireWord } from "./pdf_find_utils.js";
 import { binarySearchFirstItem } from "./ui_utils.js";
-import { createPromiseCapability } from "pdfjs-lib";
+import { createPromiseCapability } from "./promise_utils.js";
 import { internalOpt } from "./internal_evt.js";
 
 const FindState = {

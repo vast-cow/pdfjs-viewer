@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { stopEvent } from "pdfjs-lib";
+import { stopEvent } from "pdfjs-dist";
 
 // Class name of element which can be grabbed.
 const CSS_CLASS_GRAB = "grab-to-pan-grab";

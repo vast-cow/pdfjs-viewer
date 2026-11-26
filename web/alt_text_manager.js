@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { DOMSVGFactory } from "pdfjs-lib";
+import { DOMSVGFactory } from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 
 class AltTextManager {

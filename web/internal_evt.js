@@ -13,14 +13,8 @@
  * limitations under the License.
  */
 
-/**
- * Keep this file in sync with `src/shared/internal_evt.js`.
- */
-
-const INTERNAL_EVT =
-  typeof PDFJSDev !== "undefined" && !PDFJSDev.test("TESTING")
-    ? PDFJSDev.eval("INTERNAL_EVT")
-    : "internalEvent";
+// The published display layer uses this token for internal editor listeners.
+const INTERNAL_EVT = "0a475cb6-573c-46ed-869d-fa7c5839d995";
 
 const internalOpt = Object.freeze({ internal: INTERNAL_EVT });
 

@@ -14,7 +14,7 @@
  */
 
 import { internalOpt } from "./internal_evt.js";
-import { noContextMenu } from "pdfjs-lib";
+import { noContextMenu } from "pdfjs-dist";
 
 class EditorUndoBar {
   #closeButton = null;

@@ -13,15 +13,12 @@
  * limitations under the License.
  */
 
-import {
-  createPromiseCapability,
-  MathClamp,
-  PDFDataRangeTransport,
-} from "pdfjs-lib";
+import { MathClamp, PDFDataRangeTransport } from "pdfjs-dist";
 import { AppOptions } from "./app_options.js";
 import { BaseDownloadManager } from "./base_download_manager.js";
 import { BaseExternalServices } from "./external_services.js";
 import { BasePreferences } from "./preferences.js";
+import { createPromiseCapability } from "./promise_utils.js";
 import { DEFAULT_SCALE_VALUE } from "./ui_utils.js";
 import { internalOpt } from "./internal_evt.js";
 import { L10n } from "./l10n.js";

@@ -13,14 +13,14 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/annotation_storage").AnnotationStorage} AnnotationStorage */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/page_viewport").PageViewport} PageViewport */
+/** @typedef {import("pdfjs-dist/types/src/display/annotation_storage.js").AnnotationStorage} AnnotationStorage */
+
+/** @typedef {import("pdfjs-dist").PageViewport} PageViewport */
 /** @typedef {import("./pdf_link_service.js").PDFLinkService} PDFLinkService */
 
-import { XfaLayer } from "pdfjs-lib";
+import { XfaLayer } from "pdfjs-dist";
 
 /**
  * @typedef {object} XfaLayerBuilderOptions

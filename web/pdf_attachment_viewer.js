@@ -21,12 +21,12 @@
  * @import {
  *   CatalogAttachmentContent,
  *   CatalogAttachment,
- * } from "../src/core/catalog.js";
+ * } from "pdfjs-dist/types/src/core/catalog.js";
  * @import { PDFLinkService } from "./pdf_link_service.js";
  */
 
 import { BaseTreeViewer } from "./base_tree_viewer.js";
-import { createPromiseCapability } from "pdfjs-lib";
+import { createPromiseCapability } from "./promise_utils.js";
 import { internalOpt } from "./internal_evt.js";
 import { waitOnEventOrTimeout } from "./event_utils.js";
 

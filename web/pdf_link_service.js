@@ -16,10 +16,12 @@
 /** @typedef {import("./event_utils").EventBus} EventBus */
 
 /**
- * @import { CatalogAttachmentContent } from "../src/core/catalog.js";
+ * @import {
+ *   CatalogAttachmentContent,
+ * } from "pdfjs-dist/types/src/core/catalog.js";
  */
 
-import { isValidExplicitDest, PasswordException } from "pdfjs-lib";
+import { isValidExplicitDest, PasswordException } from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 import { parseQueryString } from "./ui_utils.js";
 

@@ -18,7 +18,7 @@
 /** @typedef {import("./pdf_thumbnail_viewer").PDFThumbnailViewer} PDFThumbnailViewer */
 /** @typedef {import("./renderable_view").RenderableView} RenderableView */
 
-import { RenderingCancelledException } from "pdfjs-lib";
+import { RenderingCancelledException } from "pdfjs-dist";
 import { RenderingStates } from "./renderable_view.js";
 
 const CLEANUP_TIMEOUT = 30000;

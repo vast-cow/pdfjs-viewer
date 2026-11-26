@@ -13,13 +13,6 @@
  * limitations under the License.
  */
 
-/* Import Firefox tokens only when enabled; the token sheet gates its Nova
-   overrides on browser.nova.enabled. */
-/*#if MOZCENTRAL*/
-@import url(chrome://global/skin/design-system/tokens-brand.css) -moz-pref(
-    "pdfjs.enableNova"
-  );
-/*#endif*/
 @import url(pdf_viewer.css);
 @import url(digital_signature_properties.css);
 

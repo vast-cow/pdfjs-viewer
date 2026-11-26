@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { FeatureTest, fetchData } from "pdfjs-lib";
+import { FeatureTest, fetchData } from "pdfjs-dist";
 import { FluentBundle, FluentResource } from "fluent-bundle";
 import { DOMLocalization } from "fluent-dom";
 import { L10n } from "./l10n.js";

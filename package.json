@@ -1,6 +1,9 @@
 {
   "name": "pdf.js",
   "type": "module",
+  "dependencies": {
+    "pdfjs-dist": "6.5.438"
+  },
   "devDependencies": {
     "@babel/core": "^8.1.2",
     "@babel/preset-env": "^8.0.7",

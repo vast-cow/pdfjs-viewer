@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { createPromiseCapability } from "pdfjs-lib";
+import { createPromiseCapability } from "./promise_utils.js";
 import { internalOpt } from "./internal_evt.js";
 
 /**

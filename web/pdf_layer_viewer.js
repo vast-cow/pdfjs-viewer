@@ -15,9 +15,9 @@
 
 /** @typedef {import("./event_utils.js").EventBus} EventBus */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/optional_content_config.js").OptionalContentConfig} OptionalContentConfig */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/api.js").PDFDocumentProxy} PDFDocumentProxy */
+/** @typedef {import("pdfjs-dist/types/src/display/optional_content_config.js").OptionalContentConfig} OptionalContentConfig */
+
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
 
 import { BaseTreeViewer } from "./base_tree_viewer.js";
 import { internalOpt } from "./internal_evt.js";

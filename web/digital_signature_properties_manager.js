@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { AnnotationEditorType, makeArr, PDFDateString } from "pdfjs-lib";
+import { AnnotationEditorType, makeArr, PDFDateString } from "pdfjs-dist";
 
 // Per-status descriptor keyed by the status code returned by the verifier.
 // `priority` drives worst-status aggregation, `severity` drives the banner

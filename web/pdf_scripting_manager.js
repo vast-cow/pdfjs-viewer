@@ -15,13 +15,8 @@
 
 /** @typedef {import("./event_utils").EventBus} EventBus */
 
-import {
-  createPromiseCapability,
-  getUuid,
-  makeArr,
-  noopFn,
-  shadow,
-} from "pdfjs-lib";
+import { createPromiseCapability, noopFn } from "./promise_utils.js";
+import { getUuid, makeArr, shadow } from "pdfjs-dist";
 import { apiPageLayoutToViewerModes } from "./ui_utils.js";
 import { internalOpt } from "./internal_evt.js";
 import { RenderingStates } from "./renderable_view.js";

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { noContextMenu, stopEvent } from "pdfjs-lib";
+import { noContextMenu, stopEvent } from "pdfjs-dist";
 
 class Menu {
   #triggeringButton;

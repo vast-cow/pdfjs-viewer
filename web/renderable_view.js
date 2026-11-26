@@ -28,7 +28,7 @@ class RenderableView {
   renderingId = "";
 
   /**
-   * @type {import("../src/display/api").RenderTask | null}
+   * @type {import("pdfjs-dist").RenderTask | null}
    */
   renderTask = null;
 

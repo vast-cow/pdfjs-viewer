@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { AnnotationType, createValidAbsoluteUrl, Util } from "pdfjs-lib";
+import { AnnotationType, createValidAbsoluteUrl, Util } from "pdfjs-dist";
 import { getOriginalIndex, normalize } from "./pdf_find_controller.js";
 
 function DOMRectToPDF({ width, height, left, top }, pdfPageView) {

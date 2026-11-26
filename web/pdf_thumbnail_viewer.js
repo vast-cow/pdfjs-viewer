@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFDocumentProxy} PDFDocumentProxy */
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
 /** @typedef {import("./event_utils").EventBus} EventBus */
 /** @typedef {import("./l10n.js").L10n} L10n */
 // eslint-disable-next-line max-len
@@ -27,7 +27,7 @@ import {
   isValidRotation,
   watchScroll,
 } from "./ui_utils.js";
-import { MathClamp, noContextMenu, stopEvent } from "pdfjs-lib";
+import { MathClamp, noContextMenu, stopEvent } from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 import { Menu } from "./menu.js";
 import { PDFThumbnailView } from "./pdf_thumbnail_view.js";

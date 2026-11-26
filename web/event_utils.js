@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-import { createPromiseCapability, makeSet } from "pdfjs-lib";
 import { INTERNAL_EVT, internalOpt } from "./internal_evt.js";
+import { createPromiseCapability } from "./promise_utils.js";
+import { makeSet } from "pdfjs-dist";
 
 const WaitOnType = {
   EVENT: "event",

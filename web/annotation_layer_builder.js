@@ -13,17 +13,17 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
+
+/** @typedef {import("pdfjs-dist").PageViewport} PageViewport */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/page_viewport").PageViewport} PageViewport */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/annotation_storage").AnnotationStorage} AnnotationStorage */
+/** @typedef {import("pdfjs-dist/types/src/display/annotation_storage.js").AnnotationStorage} AnnotationStorage */
 // eslint-disable-next-line max-len
 /** @typedef {import("./struct_tree_layer_builder.js").StructTreeLayerBuilder} StructTreeLayerBuilder */
 // eslint-disable-next-line max-len
 /** @typedef {import("./text_accessibility.js").TextAccessibilityManager} TextAccessibilityManager */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/editor/tools.js").AnnotationEditorUIManager} AnnotationEditorUIManager */
+/** @typedef {import("pdfjs-dist").AnnotationEditorUIManager} AnnotationEditorUIManager */
 /** @typedef {import("./comment_manager.js").CommentManager} CommentManager */
 /** @typedef {import("./pdf_link_service.js").PDFLinkService} PDFLinkService */
 // eslint-disable-next-line max-len
@@ -34,7 +34,7 @@ import {
   AnnotationType,
   setLayerDimensions,
   Util,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 import { PresentationModeState } from "./ui_utils.js";
 

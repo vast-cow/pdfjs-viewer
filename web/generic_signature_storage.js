@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { getUuid } from "pdfjs-lib";
+import { getUuid } from "pdfjs-dist";
 
 const KEY_STORAGE = "pdfjs.signature";
 

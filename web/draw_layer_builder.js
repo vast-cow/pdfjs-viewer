@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { DrawLayer } from "pdfjs-lib";
+import { DrawLayer } from "pdfjs-dist";
 
 /**
  * @typedef DrawLayerBuilderOptions

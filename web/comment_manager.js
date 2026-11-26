@@ -25,7 +25,7 @@ import {
   shadow,
   stopEvent,
   Util,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import { binarySearchFirstItem } from "./ui_utils.js";
 import { Sidebar } from "./sidebar.js";
 

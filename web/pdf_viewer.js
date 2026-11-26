@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-/** @typedef {import("../src/display/api").PDFDocumentProxy} PDFDocumentProxy */
-/** @typedef {import("../src/display/api").PDFPageProxy} PDFPageProxy */
+/** @typedef {import("pdfjs-dist").PDFDocumentProxy} PDFDocumentProxy */
+/** @typedef {import("pdfjs-dist").PDFPageProxy} PDFPageProxy */
+
+/** @typedef {import("pdfjs-dist").PageViewport} PageViewport */
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/page_viewport").PageViewport} PageViewport */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/optional_content_config").OptionalContentConfig} OptionalContentConfig */
+/** @typedef {import("pdfjs-dist/types/src/display/optional_content_config.js").OptionalContentConfig} OptionalContentConfig */
 /** @typedef {import("./event_utils").EventBus} EventBus */
 // eslint-disable-next-line max-len
 /** @typedef {import("./pdf_find_controller").PDFFindController} PDFFindController */
@@ -34,16 +34,15 @@ import {
   AnnotationEditorType,
   AnnotationEditorUIManager,
   AnnotationMode,
-  createPromiseCapability,
   makeArr,
   MathClamp,
-  noopFn,
   PermissionFlag,
   PixelsPerInch,
   shadow,
   stopEvent,
   version,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
+import { createPromiseCapability, noopFn } from "./promise_utils.js";
 import {
   DEFAULT_SCALE,
   DEFAULT_SCALE_DELTA,
@@ -75,6 +74,7 @@ import { PDFRenderingQueue } from "./pdf_rendering_queue.js";
 import { RenderingStates } from "./renderable_view.js";
 import { SimpleLinkService } from "./pdf_link_service.js";
 
+const CORE_VERSION = "6.5.438";
 const DEFAULT_CACHE_SIZE = 10;
 
 const PagesCountLimit = {
@@ -106,8 +106,6 @@ function isValidAnnotationEditorMode(mode) {
  * @property {number} [textLayerMode] - Controls if the text layer used for
  *   selection and searching is created. The constants from {TextLayerMode}
  *   should be used. The default value is `TextLayerMode.ENABLE`.
- * @property {number} [newTextLayerMode] - Controls if the text layer uses fonts
- *   with the advances of the PDF fonts: 1 to enable, 2 to enable with fonts
  *   drawing their glyph boxes (debugging), anything else to disable.
  *   The default value is `0`.
  * @property {number} [annotationMode] - Controls if the annotation layer is
@@ -262,8 +260,6 @@ class PDFViewer {
 
   #enableAutoLinking = true;
 
-  #newTextLayerMode = 0;
-
   #abortSignal = null;
 
   #eventAC = null;
@@ -316,7 +312,9 @@ class PDFViewer {
    */
   constructor(options) {
     const viewerVersion =
-      typeof PDFJSDev !== "undefined" ? PDFJSDev.eval("BUNDLE_VERSION") : null;
+      typeof PDFJSDev !== "undefined"
+        ? PDFJSDev.eval("BUNDLE_VERSION")
+        : CORE_VERSION;
     if (version !== viewerVersion) {
       throw new Error(
         `The API version "${version}" does not match the Viewer version "${viewerVersion}".`
@@ -386,7 +384,6 @@ class PDFViewer {
     this.#mlManager = options.mlManager || null;
     this.#supportsPinchToZoom = options.supportsPinchToZoom !== false;
     this.#enableAutoLinking = options.enableAutoLinking !== false;
-    this.#newTextLayerMode = options.newTextLayerMode ?? 0;
     this.#minDurationToUpdateCanvas = options.minDurationToUpdateCanvas ?? 500;
 
     this.renderingQueue = options.renderingQueue;
@@ -1107,7 +1104,6 @@ class PDFViewer {
             optionalContentConfigPromise,
             renderingQueue: this.renderingQueue,
             textLayerMode,
-            newTextLayerMode: this.#newTextLayerMode,
             annotationMode,
             imageResourcesPath: this.imageResourcesPath,
             maxCanvasPixels: this.maxCanvasPixels,

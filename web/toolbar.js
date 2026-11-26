@@ -15,7 +15,7 @@
 
 /** @typedef {import("./event_utils.js").EventBus} EventBus */
 
-import { AnnotationEditorType, ColorPicker, noContextMenu } from "pdfjs-lib";
+import { AnnotationEditorType, ColorPicker, noContextMenu } from "pdfjs-dist";
 import {
   DEFAULT_SCALE,
   DEFAULT_SCALE_VALUE,

@@ -17,7 +17,7 @@ import {
   AnnotationEditorParamsType,
   AnnotationEditorType,
   SignatureExtractor,
-} from "pdfjs-lib";
+} from "pdfjs-dist";
 import { internalOpt } from "./internal_evt.js";
 
 // Initial height in page units.

@@ -14,7 +14,7 @@
  */
 
 import { BasePDFPageView } from "./base_pdf_page_view.js";
-import { OutputScale } from "pdfjs-lib";
+import { OutputScale } from "pdfjs-dist";
 import { RenderingStates } from "./renderable_view.js";
 
 class PDFPageDetailView extends BasePDFPageView {

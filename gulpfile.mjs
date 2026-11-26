@@ -31,6 +31,7 @@ import { Marked, TextRenderer } from "marked";
 import autoprefixer from "autoprefixer";
 import { buildPrefsSchema } from "./external/chromium/prefs.mjs";
 import crypto from "crypto";
+import { fileURLToPath } from "url";
 import fs from "fs";
 import gulp from "gulp";
 import hljs from "highlight.js";
@@ -84,6 +85,9 @@ const COMMON_WEB_FILES = [
 
 const CONFIG_FILE = "pdfjs.config";
 const config = JSON.parse(fs.readFileSync(CONFIG_FILE).toString());
+const PDFJS_DIST_DIR = path.dirname(
+  fileURLToPath(import.meta.resolve("pdfjs-dist/package.json"))
+);
 
 const ENV_TARGETS = [
   "last 2 versions",
@@ -312,6 +316,7 @@ function createWebpackConfig(
     disableVersionInfo = false,
     disableSourceMaps = false,
     disableLicenseHeader = false,
+    viewerCoreVersion = null,
   } = {}
 ) {
   const versionInfo = !disableVersionInfo
@@ -319,7 +324,7 @@ function createWebpackConfig(
     : { version: 0, commit: 0 };
   const bundleDefines = {
     ...defines,
-    BUNDLE_VERSION: versionInfo.version,
+    BUNDLE_VERSION: viewerCoreVersion ?? versionInfo.version,
     BUNDLE_BUILD: versionInfo.commit,
     TESTING: defines.TESTING ?? process.env.TESTING === "true",
     COVERAGE:
@@ -333,7 +338,7 @@ function createWebpackConfig(
     .toString();
   const versionInfoHeader = [
     "/**",
-    ` * pdfjsVersion = ${versionInfo.version}`,
+    ` * pdfjsVersion = ${bundleDefines.BUNDLE_VERSION}`,
     ` * pdfjsBuild = ${versionInfo.commit}`,
     " */",
   ].join("\n");
@@ -705,14 +710,45 @@ function createRendererWorkerBundle(defines) {
   return createWebpackStream("./src/pdf.renderer.js", rendererWorkerFileConfig);
 }
 
-function createWebBundle(defines, options) {
-  const viewerFileConfig = createWebpackConfig(defines, {
-    filename: "viewer.mjs",
-    library: {
-      type: "module",
-    },
-  });
+function createWebBundle(defines) {
+  const useDist = defines.GENERIC || defines.CHROME;
+  const viewerFileConfig = createWebpackConfig(
+    defines,
+    { filename: "viewer.mjs", library: { type: "module" } },
+    { viewerCoreVersion: useDist ? config.stableVersion : null }
+  );
+  if (useDist) {
+    viewerFileConfig.externalsType = "module";
+    viewerFileConfig.externals = { "pdfjs-dist": "../build/pdf.mjs" };
+  } else {
+    viewerFileConfig.resolve.alias["pdfjs-dist"] = path.join(
+      __dirname,
+      "web/pdfjs.js"
+    );
+  }
   return createWebpackStream("./web/viewer.js", viewerFileConfig);
+}
+
+function copyCoreDistribution(dir, { legacy = false } = {}) {
+  const build = path.join(PDFJS_DIST_DIR, legacy ? "legacy/build" : "build");
+  return ordered([
+    gulp
+      .src("pdf{,.worker,.renderer,.sandbox}.mjs{,.map}", {
+        cwd: build,
+        encoding: false,
+      })
+      .pipe(gulp.dest(dir + "build")),
+    gulp
+      .src("LICENSE", { cwd: PDFJS_DIST_DIR, encoding: false })
+      .pipe(rename("LICENSE.pdfjs-dist"))
+      .pipe(gulp.dest(dir)),
+    gulp
+      .src("{cmaps,iccs,standard_fonts,wasm}/**/*", {
+        cwd: PDFJS_DIST_DIR,
+        encoding: false,
+      })
+      .pipe(gulp.dest(dir + "web")),
+  ]);
 }
 
 function createGVWebBundle(defines, options) {
@@ -1534,10 +1570,7 @@ function buildGeneric(defines, dir) {
   fs.rmSync(dir, { recursive: true, force: true });
 
   return ordered([
-    createMainBundle(defines).pipe(gulp.dest(dir + "build")),
-    createWorkerBundle(defines).pipe(gulp.dest(dir + "build")),
-    createRendererWorkerBundle(defines).pipe(gulp.dest(dir + "build")),
-    createSandboxBundle(defines).pipe(gulp.dest(dir + "build")),
+    copyCoreDistribution(dir, { legacy: !defines.SKIP_BABEL }),
     createWebBundle(defines).pipe(gulp.dest(dir + "web")),
     gulp
       .src(COMMON_WEB_FILES, { base: "web/", encoding: false })
@@ -1549,12 +1582,6 @@ function buildGeneric(defines, dir) {
         encoding: false,
       })
       .pipe(gulp.dest(dir + "web")),
-    createCMapBundle().pipe(gulp.dest(dir + "web/cmaps")),
-    createICCBundle().pipe(gulp.dest(dir + "web/iccs")),
-    createStandardFontBundle().pipe(gulp.dest(dir + "web/standard_fonts")),
-    createWasmBundle()
-      .pipe(brotliCompressFallbacks())
-      .pipe(gulp.dest(dir + "web/wasm")),
 
     preprocessHTML("web/viewer.html", defines).pipe(gulp.dest(dir + "web")),
     preprocessCSS("web/viewer.css", defines)
@@ -1571,40 +1598,24 @@ function buildGeneric(defines, dir) {
 // HTML5 browsers, which implement modern ECMAScript features.
 gulp.task(
   "generic",
-  gulp.series(
-    createBuildNumber,
-    "locale",
-    function scriptingGeneric() {
-      const defines = { ...DEFINES, GENERIC: true };
-      return createTemporaryScriptingBundle(defines);
-    },
-    function createGeneric() {
-      console.log("\n### Creating generic viewer");
-      const defines = { ...DEFINES, GENERIC: true };
+  gulp.series(createBuildNumber, "locale", function createGeneric() {
+    console.log("\n### Creating generic viewer");
+    const defines = { ...DEFINES, GENERIC: true };
 
-      return buildGeneric(defines, GENERIC_DIR);
-    }
-  )
+    return buildGeneric(defines, GENERIC_DIR);
+  })
 );
 
 // Builds the generic production viewer that should be compatible with most
 // older HTML5 browsers.
 gulp.task(
   "generic-legacy",
-  gulp.series(
-    createBuildNumber,
-    "locale",
-    function scriptingGenericLegacy() {
-      const defines = { ...DEFINES, GENERIC: true, SKIP_BABEL: false };
-      return createTemporaryScriptingBundle(defines);
-    },
-    function createGenericLegacy() {
-      console.log("\n### Creating generic (legacy) viewer");
-      const defines = { ...DEFINES, GENERIC: true, SKIP_BABEL: false };
+  gulp.series(createBuildNumber, "locale", function createGenericLegacy() {
+    console.log("\n### Creating generic (legacy) viewer");
+    const defines = { ...DEFINES, GENERIC: true, SKIP_BABEL: false };
 
-      return buildGeneric(defines, GENERIC_LEGACY_DIR);
-    }
-  )
+    return buildGeneric(defines, GENERIC_LEGACY_DIR);
+  })
 );
 
 function buildComponents(defines, dir) {
@@ -2198,12 +2209,9 @@ gulp.task(
   gulp.series(
     createBuildNumber,
     "locale",
-    function scriptingChromium() {
+    function chromiumPreferences() {
       const defines = { ...DEFINES, CHROME: true, SKIP_BABEL: false };
-      return ordered([
-        buildDefaultPreferences(defines, "chromium/"),
-        createTemporaryScriptingBundle(defines),
-      ]);
+      return buildDefaultPreferences(defines, "chromium/");
     },
     function createChromium() {
       console.log("\n### Building Chromium extension");
@@ -2222,18 +2230,7 @@ gulp.task(
       const version = getVersionJSON().version;
 
       return ordered([
-        createMainBundle(defines).pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "build")
-        ),
-        createWorkerBundle(defines).pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "build")
-        ),
-        createRendererWorkerBundle(defines).pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "build")
-        ),
-        createSandboxBundle(defines).pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "build")
-        ),
+        copyCoreDistribution(CHROME_BUILD_CONTENT_DIR, { legacy: true }),
         createWebBundle(defines).pipe(
           gulp.dest(CHROME_BUILD_CONTENT_DIR + "web")
         ),
@@ -2247,18 +2244,6 @@ gulp.task(
             encoding: false,
           })
           .pipe(gulp.dest(CHROME_BUILD_CONTENT_DIR + "web")),
-        createCMapBundle().pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "web/cmaps")
-        ),
-        createICCBundle().pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "web/iccs")
-        ),
-        createStandardFontBundle().pipe(
-          gulp.dest(CHROME_BUILD_CONTENT_DIR + "web/standard_fonts")
-        ),
-        createWasmBundle()
-          .pipe(brotliCompressFallbacks())
-          .pipe(gulp.dest(CHROME_BUILD_CONTENT_DIR + "web/wasm")),
 
         preprocessHTML("web/viewer.html", defines).pipe(
           gulp.dest(CHROME_BUILD_CONTENT_DIR + "web")
@@ -3205,30 +3190,6 @@ gulp.task(
         "l10n/**/*.ftl",
         { ignoreInitial: false },
         gulp.series("locale")
-      );
-    },
-    function watchWasm() {
-      gulp.watch(
-        [
-          "external/hellbox/*",
-          "external/openjpeg/*",
-          "external/qcms/*",
-          "external/jbig2/*",
-          "external/quickjs/*",
-        ],
-        { ignoreInitial: false },
-        gulp.series("dev-wasm")
-      );
-    },
-    function watchDevSandbox() {
-      gulp.watch(
-        [
-          "src/pdf.{sandbox,sandbox.external,scripting}.js",
-          "src/scripting_api/*.js",
-          "src/shared/scripting_utils.js",
-        ],
-        { ignoreInitial: false },
-        gulp.series("dev-sandbox")
       );
     },
     async function createServer() {

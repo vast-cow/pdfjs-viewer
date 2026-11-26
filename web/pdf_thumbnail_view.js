@@ -14,20 +14,17 @@
  */
 
 // eslint-disable-next-line max-len
-/** @typedef {import("../src/display/optional_content_config").OptionalContentConfig} OptionalContentConfig */
-// eslint-disable-next-line max-len
-/** @typedef {import("../src/display/page_viewport").PageViewport} PageViewport */
+/** @typedef {import("pdfjs-dist/types/src/display/optional_content_config.js").OptionalContentConfig} OptionalContentConfig */
+
+/** @typedef {import("pdfjs-dist").PageViewport} PageViewport */
 /** @typedef {import("./event_utils").EventBus} EventBus */
 // eslint-disable-next-line max-len
 /** @typedef {import("./pdf_rendering_queue").PDFRenderingQueue} PDFRenderingQueue */
 
-import {
-  createPromiseCapability,
-  OutputScale,
-  RenderingCancelledException,
-} from "pdfjs-lib";
+import { OutputScale, RenderingCancelledException } from "pdfjs-dist";
 import { RenderableView, RenderingStates } from "./renderable_view.js";
 import { AppOptions } from "./app_options.js";
+import { createPromiseCapability } from "./promise_utils.js";
 
 const DRAW_UPSCALE_FACTOR = 2; // See comment in `PDFThumbnailView.draw` below.
 const MAX_NUM_SCALING_STEPS = 3;

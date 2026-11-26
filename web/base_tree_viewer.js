@@ -14,7 +14,7 @@
  */
 
 import { removeNullCharacters } from "./ui_utils.js";
-import { stopEvent } from "pdfjs-lib";
+import { stopEvent } from "pdfjs-dist";
 
 const TREEITEM_SELECTED_CLASS = "selected";
 

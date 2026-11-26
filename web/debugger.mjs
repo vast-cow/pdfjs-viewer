@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-const { makeSet, OPS } = globalThis.pdfjsLib || (await import("pdfjs-lib"));
+const { makeSet, OPS } = globalThis.pdfjsLib || (await import("pdfjs-dist"));
 
 const opMap = Object.create(null);
 for (const key in OPS) {

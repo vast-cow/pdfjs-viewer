@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { isPdfFile } from "pdfjs-lib";
+import { isPdfFile } from "pdfjs-dist";
 
 class BaseDownloadManager {
   #openBlobUrls = new WeakMap();

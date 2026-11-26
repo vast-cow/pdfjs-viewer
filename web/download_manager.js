@@ -14,7 +14,7 @@
  */
 
 import { BaseDownloadManager } from "./base_download_manager.js";
-import { createValidAbsoluteUrl } from "pdfjs-lib";
+import { createValidAbsoluteUrl } from "pdfjs-dist";
 
 if (typeof PDFJSDev !== "undefined" && !PDFJSDev.test("CHROME || GENERIC")) {
   throw new Error(
