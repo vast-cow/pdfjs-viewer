@@ -4097,24 +4097,30 @@ describe("Reorganize Pages View", () => {
           // Zoom and go to the moved page: it must be re-rendered, at the new
           // scale, with the operator list and the image objects cached before
           // the move.
-          const prevCanvasWidth = await page.evaluate(() => {
-            const { pdfViewer } = window.PDFViewerApplication;
-            const width = pdfViewer.getPageView(0).canvas.width;
+          const rendered = await createPromise(page, resolve => {
+            const { eventBus, pdfViewer } = window.PDFViewerApplication;
+            const previousScale = pdfViewer.currentScale;
+            eventBus.on("pagerendered", function onRendered(event) {
+              if (
+                event.pageNumber !== 1 ||
+                event.cssTransform ||
+                event.isDetailView ||
+                event.source.scale <= previousScale
+              ) {
+                return;
+              }
+              eventBus.off("pagerendered", onRendered);
+              resolve({
+                hasError: !!event.error,
+                hasCanvas: !!event.source.canvas?.width,
+              });
+            });
             pdfViewer.increaseScale({ drawingDelay: 0, scaleFactor: 2 });
             pdfViewer.currentPageNumber = 1;
-            return width;
           });
-          await page.waitForFunction(
-            prevWidth => {
-              const view = window.PDFViewerApplication.pdfViewer.getPageView(0);
-              return (
-                // RenderingStates.FINISHED
-                view.renderingState === 3 && view.canvas?.width > prevWidth
-              );
-            },
-            {},
-            prevCanvasWidth
-          );
+          expect(await awaitPromise(rendered))
+            .withContext(`In ${browserName}`)
+            .toEqual({ hasError: false, hasCanvas: true });
         })
       );
     });
