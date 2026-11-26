@@ -13,19 +13,10 @@
  * limitations under the License.
  */
 
-import { ScrollMode, SpreadMode } from "./ui_utils.js";
 import { AppOptions } from "./app_options.js";
-import { LinkTarget } from "./pdf_link_service.js";
 import { PDFViewerApplication } from "./app.js";
-import { RenderingStates } from "./renderable_view.js";
-
-const AppConstants =
-  typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-    ? { LinkTarget, RenderingStates, ScrollMode, SpreadMode }
-    : null;
 
 window.PDFViewerApplication = PDFViewerApplication;
-window.PDFViewerApplicationConstants = AppConstants;
 window.PDFViewerApplicationOptions = AppOptions;
 
 function getViewerConfiguration() {
@@ -95,10 +86,6 @@ function getViewerConfiguration() {
       toolbar: document.getElementById("secondaryToolbar"),
       toggleButton: document.getElementById("secondaryToolbarToggleButton"),
       presentationModeButton: document.getElementById("presentationMode"),
-      openFileButton:
-        typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-          ? document.getElementById("secondaryOpenFile")
-          : null,
       printButton: document.getElementById("secondaryPrint"),
       downloadButton: document.getElementById("secondaryDownload"),
       viewBookmarkButton: document.getElementById("viewBookmark"),
@@ -366,29 +353,6 @@ function getViewerConfiguration() {
 function webViewerLoad() {
   const config = getViewerConfiguration();
 
-  if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("GENERIC")) {
-    // Give custom implementations of the default viewer a simpler way to
-    // set various `AppOptions`, by dispatching an event once all viewer
-    // files are loaded but *before* the viewer initialization has run.
-    const event = new CustomEvent("webviewerloaded", {
-      bubbles: true,
-      cancelable: true,
-      detail: {
-        source: window,
-      },
-    });
-    try {
-      // Attempt to dispatch the event at the embedding `document`,
-      // in order to support cases where the viewer is embedded in
-      // a *dynamically* created <iframe> element.
-      parent.document.dispatchEvent(event);
-    } catch (ex) {
-      // The viewer could be in e.g. a cross-origin <iframe> element,
-      // fallback to dispatching the event at the current `document`.
-      console.error("webviewerloaded:", ex);
-      document.dispatchEvent(event);
-    }
-  }
   PDFViewerApplication.run(config);
 }
 
@@ -405,8 +369,4 @@ if (
   document.addEventListener("DOMContentLoaded", webViewerLoad, true);
 }
 
-export {
-  PDFViewerApplication,
-  AppConstants as PDFViewerApplicationConstants,
-  AppOptions as PDFViewerApplicationOptions,
-};
+export { PDFViewerApplication, AppOptions as PDFViewerApplicationOptions };

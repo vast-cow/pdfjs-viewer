@@ -355,9 +355,6 @@ class WebServer {
 // This supports the "Cross-origin" test in test/unit/api_spec.js
 // and "Redirects" in test/unit/network_spec.js and
 // test/unit/fetch_stream_spec.js via test/unit/common_pdfstream_tests.js.
-// It is here instead of test.mjs so that when the test will still complete as
-// expected if the user does "gulp server" and then visits
-// http://localhost:8888/test/unit/unit_test.html?spec=Cross-origin
 function crossOriginHandler(url, request, response) {
   if (url.pathname === "/test/pdfs/basicapi.pdf") {
     if (!url.searchParams.has("cors") || !request.headers.origin) {
@@ -377,9 +374,6 @@ function crossOriginHandler(url, request, response) {
 
 // This supports the "Redirects" test in test/unit/network_spec.js and
 // test/unit/fetch_stream_spec.js via test/unit/common_pdfstream_tests.js.
-// It is here instead of test.mjs so that when the test will still complete as
-// expected if the user does "gulp server" and then visits
-// http://localhost:8888/test/unit/unit_test.html?spec=Redirects
 function redirectHandler(url, request, response) {
   const redirectToHost = url.searchParams.get("redirectToHost");
   if (redirectToHost) {

@@ -76,7 +76,7 @@ class EventBus {
   #listeners = new Map();
 
   constructor() {
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
+    if (typeof PDFJSDev === "undefined") {
       // Prevent the class methods from being overridden by third-party users,
       // to ensure that `INTERNAL_EVT` cannot be accessed from the outside.
       Object.seal(this);

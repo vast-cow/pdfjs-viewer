@@ -644,25 +644,10 @@ function isPortraitOrientation(size) {
  * Promise that is resolved when DOM window becomes visible.
  */
 const animationStarted = new Promise(function (resolve) {
-  if (
-    typeof PDFJSDev !== "undefined" &&
-    PDFJSDev.test("LIB") &&
-    typeof window === "undefined"
-  ) {
-    // Prevent "ReferenceError: window is not defined" errors when running the
-    // unit-tests in Node.js environments.
-    setTimeout(resolve, 20);
-    return;
-  }
   window.requestAnimationFrame(resolve);
 });
 
-const docStyle =
-  typeof PDFJSDev !== "undefined" &&
-  PDFJSDev.test("LIB") &&
-  typeof document === "undefined"
-    ? null
-    : document.documentElement.style;
+const docStyle = document.documentElement.style;
 
 class ProgressBar {
   #classList = null;
@@ -843,13 +828,6 @@ function toggleExpandedBtn(button, toggle, view = null) {
 // are using f64 one. So in order to have the same rendering in all browsers, we
 // need to use the right precision in order to have correct dimensions.
 const calcRound = (function () {
-  if (
-    typeof PDFJSDev !== "undefined" &&
-    PDFJSDev.test("LIB") &&
-    typeof document === "undefined"
-  ) {
-    return x => x;
-  }
   const e = document.createElement("div");
   e.style.width = "round(down, calc(1.6666666666666665 * 792px), 1px)";
   return e.style.width === "calc(1320px)" ? Math.fround : x => x;

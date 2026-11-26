@@ -54,14 +54,19 @@ import {
   PDFWorker,
   ResponseException,
   shadow,
-  stopEvent,
   TouchManager,
   updateUrlHash,
   version,
 } from "pdfjs-dist";
 import { AppOptions, OptionKind } from "./app_options.js";
 import { createPromiseCapability, noopFn } from "./promise_utils.js";
-import { ExternalServices, initCom, MLManager } from "web-external_services";
+import {
+  DownloadManager,
+  ExternalServices,
+  initCom,
+  MLManager,
+  Preferences,
+} from "./chromecom.js";
 import {
   ImageAltTextSettings,
   NewAltTextManager,
@@ -71,7 +76,6 @@ import { AltTextManager } from "web-alt_text_manager";
 import { AnnotationEditorParams } from "web-annotation_editor_params";
 import { CaretBrowsingMode } from "./caret_browsing.js";
 import { CommentManager } from "./comment_manager.js";
-import { DownloadManager } from "web-download_manager";
 import { EditorUndoBar } from "./editor_undo_bar.js";
 import { EventBus } from "./event_utils.js";
 import { internalOpt } from "./internal_evt.js";
@@ -92,7 +96,6 @@ import { PDFScriptingManager } from "./pdf_scripting_manager.js";
 import { PdfTextExtractor } from "./pdf_text_extractor.js";
 import { PDFThumbnailViewer } from "web-pdf_thumbnail_viewer";
 import { PDFViewer } from "./pdf_viewer.js";
-import { Preferences } from "web-preferences";
 import { RenderingStates } from "./renderable_view.js";
 import { SecondaryToolbar } from "web-secondary_toolbar";
 import { SignatureManager } from "web-signature_manager";
@@ -284,10 +287,7 @@ const PDFViewerApplication = {
       if (this._PDFBug) {
         return;
       }
-      const { PDFBug } =
-        typeof PDFJSDev === "undefined"
-          ? await import(AppOptions.get("debuggerSrc")) // eslint-disable-line no-unsanitized/method
-          : await __raw_import__(AppOptions.get("debuggerSrc"));
+      const { PDFBug } = await __raw_import__(AppOptions.get("debuggerSrc"));
 
       this._PDFBug = PDFBug;
     };
@@ -297,9 +297,7 @@ const PDFViewerApplication = {
       try {
         GlobalWorkerOptions.workerSrc ||= AppOptions.get("workerSrc");
 
-        typeof PDFJSDev === "undefined" // eslint-disable-line no-unused-expressions
-          ? await import(PDFWorker.workerSrc) // eslint-disable-line no-unsanitized/method
-          : await __raw_import__(PDFWorker.workerSrc);
+        await __raw_import__(PDFWorker.workerSrc);
 
         // Ensure that the "fake" worker won't be ignored.
         AppOptions.set("workerPort", null);
@@ -340,11 +338,7 @@ const PDFViewerApplication = {
       }
       AppOptions.setAll(debugOpts);
     }
-    if (
-      (typeof PDFJSDev === "undefined" ||
-        PDFJSDev.test("GENERIC || TESTING")) &&
-      params.has("locale")
-    ) {
+    if (PDFJSDev.test("TESTING") && params.has("locale")) {
       AppOptions.set("localeProperties", { lang: params.get("locale") });
     }
 
@@ -785,65 +779,6 @@ const PDFViewerApplication = {
     await this.initialize(config);
 
     const { appConfig, eventBus } = this;
-    let file;
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      const queryString = document.location.search.substring(1);
-      const params = parseQueryString(queryString);
-      file = params.get("file") ?? AppOptions.get("defaultUrl");
-      // Note that `parseQueryString` has already percent-decoded the parameter,
-      // hence it's used as-is below: re-encoding it would break URLs with e.g.
-      // a query string or a percent-encoded path (issue 20137).
-      // In a relative URL a "#" is assumed to be part of the filename, rather
-      // than a fragment separator, since the viewer takes its own hash
-      // parameters from the *viewer* URL (issue 19990).
-      file = URL.parse(file)?.href ?? file.replaceAll("#", "%23");
-      validateFileURL(file);
-    } else if (PDFJSDev.test("CHROME")) {
-      file = AppOptions.get("defaultUrl");
-    }
-
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      const fileInput = (this._openFileInput = document.createElement("input"));
-      fileInput.id = "fileInput";
-      fileInput.hidden = true;
-      fileInput.type = "file";
-      fileInput.value = null;
-      document.body.append(fileInput);
-
-      fileInput.addEventListener("change", function (evt) {
-        const { files } = evt.target;
-        if (!files?.length) {
-          return;
-        }
-        eventBus.dispatch("fileinputchange", {
-          source: this,
-          fileInput: evt.target,
-        });
-      });
-
-      // Enable dragging-and-dropping a new PDF file onto the viewerContainer.
-      appConfig.mainContainer.addEventListener("dragover", function (evt) {
-        for (const item of evt.dataTransfer.items) {
-          if (item.type === "application/pdf") {
-            evt.dataTransfer.dropEffect =
-              evt.dataTransfer.effectAllowed === "copy" ? "copy" : "move";
-            stopEvent(evt);
-            return;
-          }
-        }
-      });
-      appConfig.mainContainer.addEventListener("drop", function (evt) {
-        if (evt.dataTransfer.files?.[0].type !== "application/pdf") {
-          return;
-        }
-        stopEvent(evt);
-        eventBus.dispatch("fileinputchange", {
-          source: this,
-          fileInput: evt.dataTransfer,
-        });
-      });
-    }
-
     if (!AppOptions.get("supportsDocumentFonts")) {
       AppOptions.set("disableFontFace", true);
       this.l10n.get("pdfjs-web-fonts-disabled").then(msg => {
@@ -881,19 +816,9 @@ const PDFViewerApplication = {
       this.supportsIntegratedFind
     );
 
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      if (file) {
-        this.open({ url: file });
-      } else {
-        this._hideViewBookmark();
-      }
-    } else if (PDFJSDev.test("CHROME")) {
-      this.setTitleUsingUrl(file, /* downloadUrl = */ file);
-
-      this.externalServices.initPassiveLoading();
-    } else {
-      throw new Error("Not implemented: run");
-    }
+    const file = AppOptions.get("defaultUrl");
+    this.setTitleUsingUrl(file, /* downloadUrl = */ file);
+    this.externalServices.initPassiveLoading();
   },
 
   get externalServices() {
@@ -1049,28 +974,19 @@ const PDFViewerApplication = {
 
   setTitleUsingUrl(url = "", downloadUrl = null) {
     this.url = url;
-    this.baseUrl =
-      typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-        ? updateUrlHash(url, "", /* allowRel = */ true)
-        : updateUrlHash(url, "");
+    this.baseUrl = updateUrlHash(url, "");
     if (downloadUrl) {
       this._downloadUrl =
-        // eslint-disable-next-line no-nested-ternary
-        downloadUrl === url
-          ? this.baseUrl
-          : typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-            ? updateUrlHash(downloadUrl, "", /* allowRel = */ true)
-            : updateUrlHash(downloadUrl, "");
+        downloadUrl === url ? this.baseUrl : updateUrlHash(downloadUrl, "");
     }
     if (isDataScheme(url)) {
       this._hideViewBookmark();
-    } else if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")) {
-      AppOptions.set(
-        "docBaseUrl",
-        (PDFJSDev.test("TESTING") &&
-          parseQueryString(location.hash.slice(1)).get("docbaseurl")) ||
+    } else {
+      const baseUrl = PDFJSDev.test("TESTING")
+        ? parseQueryString(location.hash.slice(1)).get("docbaseurl") ||
           this.baseUrl
-      );
+        : this.baseUrl;
+      AppOptions.set("docBaseUrl", baseUrl);
     }
 
     let title = getPdfFilenameFromUrl(url, "");
@@ -1145,20 +1061,6 @@ const PDFViewerApplication = {
     if (!this.pdfLoadingTask) {
       return;
     }
-    if (
-      (typeof PDFJSDev === "undefined" ||
-        PDFJSDev.test("GENERIC && !TESTING")) &&
-      this._hasChanges() &&
-      this._annotationStorageModified
-    ) {
-      try {
-        // Trigger saving, to prevent data loss in forms; see issue 12257.
-        await this.downloadOrSave();
-      } catch {
-        // Ignoring errors, to ensure that document closing won't break.
-      }
-    }
-
     const promises = [];
 
     promises.push(this.pdfLoadingTask.destroy());
@@ -1518,17 +1420,13 @@ const PDFViewerApplication = {
     this.toolbar?.setPagesCount(pdfDocument.numPages, false);
     this.secondaryToolbar?.setPagesCount(pdfDocument.numPages);
 
-    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")) {
-      const baseUrl = updateUrlHash(location, "");
-      // Ignore "data:"-URLs for performance reasons, even though it may cause
-      // internal links to not work perfectly in all cases (see bug 1803050).
-      this.pdfLinkService.setDocument(
-        pdfDocument,
-        isDataScheme(baseUrl) ? null : baseUrl
-      );
-    } else {
-      this.pdfLinkService.setDocument(pdfDocument);
-    }
+    const baseUrl = updateUrlHash(location, "");
+    // Ignore "data:"-URLs for performance reasons, even though it may cause
+    // internal links to not work perfectly in all cases (see bug 1803050).
+    this.pdfLinkService.setDocument(
+      pdfDocument,
+      isDataScheme(baseUrl) ? null : baseUrl
+    );
     this.pdfDocumentProperties?.setDocument(pdfDocument);
 
     const pdfViewer = this.pdfViewer;
@@ -2008,16 +1906,6 @@ const PDFViewerApplication = {
     }
     const { annotationStorage } = pdfDocument;
 
-    annotationStorage.onSetModified = () => {
-      if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-        this._annotationStorageModified = true;
-      }
-    };
-    annotationStorage.onResetModified = () => {
-      if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-        delete this._annotationStorageModified;
-      }
-    };
     annotationStorage.onAnnotationEditor = typeStr => {
       this._hasAnnotationEditors = !!typeStr;
       this.setTitle();
@@ -2281,10 +2169,6 @@ const PDFViewerApplication = {
       opts
     );
 
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      eventBus.on("fileinputchange", onFileInputChange.bind(this), opts);
-      eventBus.on("openfile", onOpenFile.bind(this), opts);
-    }
     if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       eventBus.on(
         "setpreference",
@@ -2571,56 +2455,6 @@ const PDFViewerApplication = {
 
 initCom(PDFViewerApplication);
 PDFPrintServiceFactory.initGlobals(PDFViewerApplication);
-
-if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-  const HOSTED_VIEWER_ORIGINS = new Set([
-    "null",
-    "http://mozilla.github.io",
-    "https://mozilla.github.io",
-  ]);
-  // eslint-disable-next-line no-var
-  var validateFileURL = function (file) {
-    if (!file) {
-      return;
-    }
-    const viewerOrigin = URL.parse(window.location)?.origin || "null";
-    if (HOSTED_VIEWER_ORIGINS.has(viewerOrigin)) {
-      // Hosted or local viewer, allow for any file locations
-      return;
-    }
-    const fileOrigin = URL.parse(file, window.location)?.origin;
-    if (fileOrigin === viewerOrigin) {
-      return;
-    }
-    const ex = new Error("file origin does not match viewer's");
-
-    PDFViewerApplication._documentError("pdfjs-loading-error", {
-      message: ex.message,
-    });
-    // Removing of the following line will not guarantee that the viewer will
-    // start accepting URLs from foreign origin -- CORS headers on the remote
-    // server must be properly configured.
-    throw ex;
-  };
-
-  // eslint-disable-next-line no-var
-  var onFileInputChange = function (evt) {
-    if (this.pdfViewer?.isInPresentationMode) {
-      return; // Opening a new PDF file isn't supported in Presentation Mode.
-    }
-    const file = evt.fileInput.files[0];
-
-    this.open({
-      url: URL.createObjectURL(file),
-      originalUrl: encodeURIComponent(file.name),
-    });
-  };
-
-  // eslint-disable-next-line no-var
-  var onOpenFile = function (evt) {
-    this._openFileInput?.click();
-  };
-}
 
 function onPageRender({ pageNumber }) {
   // If the page is (the most) visible when it starts rendering,
@@ -3132,23 +2966,10 @@ function onKeyDown(evt) {
     }
   }
 
-  if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC || CHROME")) {
-    // CTRL or META without shift
-    if (cmd === 1 || cmd === 8) {
-      switch (evt.keyCode) {
-        case 83: // s
-          eventBus.dispatch("download", { source: window });
-          handled = true;
-          break;
-
-        case 79: // o
-          if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-            eventBus.dispatch("openfile", { source: window });
-            handled = true;
-          }
-          break;
-      }
-    }
+  // CTRL or META without shift
+  if ((cmd === 1 || cmd === 8) && evt.keyCode === 83) {
+    eventBus.dispatch("download", { source: window });
+    handled = true;
   }
 
   // CTRL+ALT or Option+Command

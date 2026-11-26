@@ -276,7 +276,7 @@ class TextLayerBuilder {
       { signal }
     );
 
-    let isFirefoxOrModernChromium, prevRange;
+    let isModernChromium, prevRange;
 
     document.addEventListener(
       "selectionchange",
@@ -319,29 +319,18 @@ class TextLayerBuilder {
           }
         }
 
-        if (isFirefoxOrModernChromium === undefined) {
-          if (typeof PDFJSDev === "undefined" || !PDFJSDev.test("CHROME")) {
-            isFirefoxOrModernChromium =
-              getComputedStyle(
-                this.#textLayers.values().next().value
-              ).getPropertyValue("-moz-user-select") === "none";
-          }
-          if (
-            (typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")) ||
-            !isFirefoxOrModernChromium
-          ) {
-            // navigator.userAgentData is only available in secure contexts
-            const chromiumVersion = navigator.userAgentData
-              ? navigator.userAgentData.brands.find(
-                  ({ brand }) => brand === "Chromium"
-                )?.version
-              : /\bChrome\/(\d+)\b/.exec(navigator.userAgent)?.[1];
+        if (isModernChromium === undefined) {
+          // navigator.userAgentData is only available in secure contexts.
+          const chromiumVersion = navigator.userAgentData
+            ? navigator.userAgentData.brands.find(
+                ({ brand }) => brand === "Chromium"
+              )?.version
+            : /\bChrome\/(\d+)\b/.exec(navigator.userAgent)?.[1];
 
-            isFirefoxOrModernChromium =
-              !!chromiumVersion && parseInt(chromiumVersion, 10) >= 148;
-          }
+          isModernChromium =
+            !!chromiumVersion && parseInt(chromiumVersion, 10) >= 148;
         }
-        if (isFirefoxOrModernChromium) {
+        if (isModernChromium) {
           return;
         }
 

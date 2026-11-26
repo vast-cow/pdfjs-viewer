@@ -377,11 +377,7 @@ class PDFHistory {
       destination,
     };
 
-    if (
-      typeof PDFJSDev !== "undefined" &&
-      PDFJSDev.test("CHROME") &&
-      window.history.state?.chromecomState
-    ) {
+    if (window.history.state?.chromecomState) {
       // history.state.chromecomState is managed by chromecom.js.
       newState.chromecomState = window.history.state.chromecomState;
     }
@@ -480,7 +476,7 @@ class PDFHistory {
         }
       } else {
         // This should only occur in viewers with support for opening more than
-        // one PDF document, e.g. the GENERIC viewer.
+        // one PDF document in the same tab.
         return false;
       }
     }
@@ -592,13 +588,7 @@ class PDFHistory {
       hashChanged = this._currentHash !== newHash;
     this._currentHash = newHash;
 
-    if (
-      (typeof PDFJSDev !== "undefined" &&
-        PDFJSDev.test("CHROME") &&
-        state?.chromecomState &&
-        !this.#isValidState(state)) ||
-      !state
-    ) {
+    if (!state || (state.chromecomState && !this.#isValidState(state))) {
       // This case corresponds to the user changing the hash of the document.
       this._uid++;
 
@@ -611,7 +601,7 @@ class PDFHistory {
     }
     if (!this.#isValidState(state)) {
       // This should only occur in viewers with support for opening more than
-      // one PDF document, e.g. the GENERIC viewer.
+      // one PDF document in the same tab.
       return;
     }
 

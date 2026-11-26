@@ -37,17 +37,11 @@ class BasePreferences {
 
     this.#initializedPromise = this._readFromStorage(this.#defaults).then(
       ({ browserPrefs, prefs }) => {
-        if (
-          (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
-          AppOptions._checkDisablePreferences()
-        ) {
-          return;
-        }
         AppOptions.setAll({ ...browserPrefs, ...prefs }, /* prefs = */ true);
       }
     );
 
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING && !LIB")) {
+    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       window.addEventListener(
         "updatedPreference",
         async ({ detail: { name, value } }) => {

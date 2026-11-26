@@ -36,11 +36,7 @@ async function docProperties(pdfDocument) {
 class GenericScripting {
   constructor(sandboxBundleSrc, wasmUrl) {
     this._ready = new Promise((resolve, reject) => {
-      const sandbox =
-        typeof PDFJSDev === "undefined"
-          ? import(sandboxBundleSrc) // eslint-disable-line no-unsanitized/method
-          : __raw_import__(sandboxBundleSrc);
-      sandbox
+      __raw_import__(sandboxBundleSrc)
         .then(pdfjsSandbox => {
           resolve(
             pdfjsSandbox.QuickJSSandbox(new URL(wasmUrl, document.baseURI).href)

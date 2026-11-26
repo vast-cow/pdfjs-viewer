@@ -13,27 +13,7 @@
  * limitations under the License.
  */
 
-if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-  var compatParams = new Map(); // eslint-disable-line no-var
-  const { maxTouchPoints, platform, userAgent } = navigator;
-
-  const isAndroid = /Android/.test(userAgent);
-  const isIOS =
-    /\b(?:iPad|iPhone|iPod)(?=;)/.test(userAgent) ||
-    (platform === "MacIntel" && maxTouchPoints > 1);
-
-  // Limit canvas size to 5 mega-pixels on mobile.
-  // Support: Android, iOS
-  if (isIOS || isAndroid) {
-    compatParams.set("maxCanvasPixels", 5242880);
-  }
-
-  // Don't use system fonts on Android (issue 18210).
-  // Support: Android
-  if (isAndroid) {
-    compatParams.set("useSystemFonts", false);
-  }
-}
+const TESTING = typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING");
 
 const OptionKind = {
   BROWSER: 0x01,
@@ -72,10 +52,7 @@ const defaultOptions = new Map([
     "localeProperties",
     {
       /** @type {object} */
-      value:
-        typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-          ? { lang: navigator.language || "en-US" }
-          : null,
+      value: null,
       kind: OptionKind.BROWSER,
     },
   ],
@@ -190,10 +167,7 @@ const defaultOptions = new Map([
     "commentLearnMoreUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "https://support.mozilla.org/%LOCALE%/kb/view-pdf-files-firefox-or-choose-another-viewer#w_add-a-comment-to-a-pdf"
-          : "",
+      value: "",
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -217,10 +191,7 @@ const defaultOptions = new Map([
     "defaultUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")
-          ? ""
-          : "compressed.tracemonkey-pldi-09.pdf",
+      value: "",
       kind: OptionKind.VIEWER,
     },
   ],
@@ -256,30 +227,14 @@ const defaultOptions = new Map([
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
-  ...(typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")
-    ? [
-        [
-          "disablePreferences",
-          {
-            /** @type {boolean} */
-            value: typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING"),
-            kind: OptionKind.VIEWER,
-          },
-        ],
-      ]
-    : []),
-  ...(typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")
-    ? [
-        [
-          "disableTelemetry",
-          {
-            /** @type {boolean} */
-            value: false,
-            kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
-          },
-        ],
-      ]
-    : []),
+  [
+    "disableTelemetry",
+    {
+      /** @type {boolean} */
+      value: false,
+      kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
+    },
+  ],
   [
     "enableAltText",
     {
@@ -309,7 +264,7 @@ const defaultOptions = new Map([
     "enableComment",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined",
+      value: false,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -321,7 +276,7 @@ const defaultOptions = new Map([
       kind: OptionKind.VIEWER,
     },
   ],
-  ...(typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")
+  ...(TESTING
     ? [
         [
           "enableFakeMLManager",
@@ -349,7 +304,7 @@ const defaultOptions = new Map([
       // in Firefox release, but it has to be temporary.
       // TODO: remove it when unnecessary.
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING"),
+      value: TESTING,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -365,7 +320,7 @@ const defaultOptions = new Map([
     "enableNewBadge",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined",
+      value: false,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -397,8 +352,7 @@ const defaultOptions = new Map([
     "enableScripting",
     {
       /** @type {boolean} */
-      value:
-        typeof PDFJSDev === "undefined" || PDFJSDev.test("!CHROME || TESTING"),
+      value: TESTING,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -414,16 +368,16 @@ const defaultOptions = new Map([
     "enableSignatureEditor",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING"),
+      value: TESTING,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
   [
     "enableSignatureVerification",
     {
-      // Enable the verification UI in development and test builds.
+      // Enable the verification UI in test builds.
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING"),
+      value: TESTING,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -502,7 +456,7 @@ const defaultOptions = new Map([
       /** @type {number} */
       // Keep image context menus off in distribution builds to avoid
       // interfering with text selection in Chrome and Safari.
-      value: typeof PDFJSDev === "undefined" ? 16 : -1,
+      value: -1,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -550,7 +504,7 @@ const defaultOptions = new Map([
     "pdfBugEnabled",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING"),
+      value: TESTING,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -574,10 +528,7 @@ const defaultOptions = new Map([
     "sandboxBundleSrc",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/build/pdf.sandbox.mjs"
-          : "../build/pdf.sandbox.mjs",
+      value: "../build/pdf.sandbox.mjs",
       kind: OptionKind.VIEWER,
     },
   ],
@@ -617,7 +568,7 @@ const defaultOptions = new Map([
     "viewerCssTheme",
     {
       /** @type {number} */
-      value: typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME") ? 2 : 0,
+      value: 2,
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],
@@ -644,10 +595,7 @@ const defaultOptions = new Map([
     "cMapUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/cmaps/"
-          : "../web/cmaps/",
+      value: "../web/cmaps/",
       kind: OptionKind.API,
     },
   ],
@@ -687,7 +635,7 @@ const defaultOptions = new Map([
     "disableWorkerRendering",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev !== "undefined" && !PDFJSDev.test("TESTING"),
+      value: !TESTING,
       kind: OptionKind.API + OptionKind.PREFERENCE,
     },
   ],
@@ -695,13 +643,7 @@ const defaultOptions = new Map([
     "docBaseUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? // NOTE: We cannot use the `updateUrlHash` function here, because of
-            // the default preferences generation (see `gulpfile.mjs`).
-            // However, the following line is *only* used in development mode.
-            document.URL.split("#", 1)[0]
-          : "",
+      value: "",
       kind: OptionKind.API,
     },
   ],
@@ -741,10 +683,7 @@ const defaultOptions = new Map([
     "iccUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/iccs/"
-          : "../web/iccs/",
+      value: "../web/iccs/",
       kind: OptionKind.API,
     },
   ],
@@ -760,10 +699,7 @@ const defaultOptions = new Map([
     "standardFontDataUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/standard_fonts/"
-          : "../web/standard_fonts/",
+      value: "../web/standard_fonts/",
       kind: OptionKind.API,
     },
   ],
@@ -788,10 +724,7 @@ const defaultOptions = new Map([
     "wasmUrl",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/wasm/"
-          : "../web/wasm/",
+      value: "../web/wasm/",
       kind: OptionKind.API,
     },
   ],
@@ -802,10 +735,7 @@ const defaultOptions = new Map([
     "rendererSrc",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/build/pdf.renderer.mjs"
-          : "../build/pdf.renderer.mjs",
+      value: "../build/pdf.renderer.mjs",
       kind: OptionKind.WORKER,
     },
   ],
@@ -821,10 +751,7 @@ const defaultOptions = new Map([
     "workerSrc",
     {
       /** @type {string} */
-      value:
-        typeof PDFJSDev === "undefined"
-          ? "../node_modules/pdfjs-dist/build/pdf.worker.mjs"
-          : "../build/pdf.worker.mjs",
+      value: "../build/pdf.worker.mjs",
       kind: OptionKind.WORKER,
     },
   ],
@@ -846,11 +773,6 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
           `Cannot have \`type\`-field for "PREFERENCE" kind: ${name}`
         );
       }
-      if (typeof compatParams === "object" && compatParams.has(name)) {
-        throw new Error(
-          `Should not have compatibility-value for "PREFERENCE" kind: ${name}`
-        );
-      }
       // Only "simple" preference-values are allowed.
       if (
         typeof value !== "boolean" &&
@@ -863,11 +785,6 @@ if (typeof PDFJSDev === "undefined" || PDFJSDev.test("TESTING")) {
       if (type !== undefined) {
         throw new Error(
           `Cannot have \`type\`-field for "BROWSER" kind: ${name}`
-        );
-      }
-      if (typeof compatParams === "object" && compatParams.has(name)) {
-        throw new Error(
-          `Should not have compatibility-value for "BROWSER" kind: ${name}`
         );
       }
       if (value === undefined) {
@@ -886,29 +803,6 @@ class AppOptions {
     // Initialize all the user-options.
     for (const [name, defaultOpt] of defaultOptions) {
       this.#opts.set(name, defaultOpt.value);
-    }
-
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      // Apply any compatibility-values to the user-options.
-      for (const [name, value] of compatParams) {
-        this.#opts.set(name, value);
-      }
-      this._hasInvokedSet = false;
-
-      this._checkDisablePreferences = () => {
-        if (this.get("disablePreferences")) {
-          // Give custom implementations of the default viewer a simpler way to
-          // opt-out of having the `Preferences` override existing `AppOptions`.
-          return true;
-        }
-        if (this._hasInvokedSet) {
-          console.warn(
-            "The Preferences may override manually set AppOptions; " +
-              'please use the "disablePreferences"-option to prevent that.'
-          );
-        }
-        return false;
-      };
     }
   }
 
@@ -938,9 +832,6 @@ class AppOptions {
   }
 
   static setAll(options, prefs = false) {
-    if (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) {
-      this._hasInvokedSet ||= true;
-    }
     let events;
 
     for (const name in options) {

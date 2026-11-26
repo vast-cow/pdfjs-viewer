@@ -48,16 +48,11 @@ class GenericL10n extends L10n {
   constructor(lang) {
     super({ lang });
 
-    const generateBundles = !lang
-      ? GenericL10n.#generateBundlesFallback.bind(
-          GenericL10n,
-          this.getLanguage()
-        )
-      : GenericL10n.#generateBundles.bind(
-          GenericL10n,
-          "en-us",
-          this.getLanguage()
-        );
+    const generateBundles = GenericL10n.#generateBundles.bind(
+      GenericL10n,
+      "en-us",
+      this.getLanguage()
+    );
     this._setL10n(new DOMLocalization([], generateBundles));
   }
 
@@ -121,23 +116,9 @@ class GenericL10n extends L10n {
     return { baseURL: "./", paths: Object.create(null) };
   }
 
-  static async *#generateBundlesFallback(lang) {
-    yield this.#createBundleFallback(lang);
-  }
-
   static async #createBundleFallback(lang) {
-    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
-      throw new Error("Not implemented: #createBundleFallback");
-    }
-    const text =
-      typeof PDFJSDev === "undefined"
-        ? await fetchData(
-            new URL("../l10n/en-US/viewer.ftl", window.location.href),
-            /* type = */ "text"
-          )
-        : PDFJSDev.eval("DEFAULT_FTL");
-
-    return createBundle(lang, text);
+    const url = new URL("locale/en-US/viewer.ftl", document.baseURI);
+    return createBundle(lang, await fetchData(url, /* type = */ "text"));
   }
 }
 

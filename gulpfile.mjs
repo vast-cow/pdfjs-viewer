@@ -13,6 +13,7 @@
  * limitations under the License.
  */
 
+import { AppOptions, OptionKind } from "./web/app_options.js";
 import { execSync, spawn, spawnSync } from "child_process";
 import autoprefixer from "autoprefixer";
 import { babelPluginPDFJSPreprocessor } from "./external/builder/babel-plugin-pdfjs-preprocessor.mjs";
@@ -35,10 +36,8 @@ import webpack from "webpack";
 const __dirname = import.meta.dirname;
 const BUILD_DIR = "build/";
 const L10N_DIR = "l10n/";
-const GENERIC_DIR = BUILD_DIR + "generic/";
 const CHROMIUM_DIR = BUILD_DIR + "chromium/";
 const CHROMIUM_TEST_DIR = BUILD_DIR + "chromium-test/";
-const PREFERENCES_DIR = BUILD_DIR + "default_preferences/";
 
 const config = JSON.parse(fs.readFileSync("pdfjs.config"));
 const distManifest = fileURLToPath(
@@ -69,13 +68,6 @@ const BABEL_COREJS_OPTS = Object.freeze({
   shippedProposals: true,
 });
 
-const DEFINES = Object.freeze({
-  GENERIC: false,
-  CHROME: false,
-  LIB: false,
-  TESTING: false,
-});
-
 function transform(charEncoding, transformFunction) {
   return new stream.Transform({
     objectMode: true,
@@ -104,14 +96,12 @@ function createStringSource(filename, content) {
   return source;
 }
 
-function createWebpackAlias({ CHROME }) {
+function createWebpackAlias() {
   const aliases = {
     "fluent-bundle": "node_modules/@fluent/bundle/esm/index.js",
     "fluent-dom": "node_modules/@fluent/dom/esm/index.js",
     "web-alt_text_manager": "web/alt_text_manager.js",
     "web-annotation_editor_params": "web/annotation_editor_params.js",
-    "web-download_manager": "",
-    "web-external_services": "",
     "web-new_alt_text_manager": "web/new_alt_text_manager.js",
     "web-pdf_attachment_viewer": "web/pdf_attachment_viewer.js",
     "web-pdf_cursor_tools": "web/pdf_cursor_tools.js",
@@ -121,8 +111,7 @@ function createWebpackAlias({ CHROME }) {
     "web-pdf_outline_viewer": "web/pdf_outline_viewer.js",
     "web-pdf_presentation_mode": "web/pdf_presentation_mode.js",
     "web-pdf_thumbnail_viewer": "web/pdf_thumbnail_viewer.js",
-    "web-preferences": "",
-    "web-print_service": "",
+    "web-print_service": "web/pdf_print_service.js",
     "web-secondary_toolbar": "web/secondary_toolbar.js",
     "web-signature_manager": "web/signature_manager.js",
     "web-digital_signature_properties_manager":
@@ -131,15 +120,6 @@ function createWebpackAlias({ CHROME }) {
     "web-views_manager": "web/views_manager.js",
   };
 
-  const externalServices = CHROME ? "web/chromecom.js" : "web/genericcom.js";
-  Object.assign(aliases, {
-    "web-download_manager": CHROME
-      ? externalServices
-      : "web/download_manager.js",
-    "web-external_services": externalServices,
-    "web-preferences": externalServices,
-    "web-print_service": "web/pdf_print_service.js",
-  });
   return Object.fromEntries(
     Object.entries(aliases).map(([name, file]) => [
       name,
@@ -148,23 +128,20 @@ function createWebpackAlias({ CHROME }) {
   );
 }
 
-function createWebpackConfig(defines, filename) {
+function createWebpackConfig(testing) {
   const plugins = [
     [
       babelPluginPDFJSPreprocessor,
       {
         rootPath: __dirname,
         defines: {
-          ...defines,
-          DEFAULT_FTL: defines.GENERIC ? getDefaultFtl() : "",
+          TESTING: testing,
           BUNDLE_VERSION: config.stableVersion,
         },
       },
     ],
+    ["babel-plugin-polyfill-corejs3", BABEL_COREJS_OPTS],
   ];
-  if (defines.CHROME) {
-    plugins.push(["babel-plugin-polyfill-corejs3", BABEL_COREJS_OPTS]);
-  }
 
   const license = fs.readFileSync(
     "external/builder/license_header_libre.js",
@@ -172,13 +149,13 @@ function createWebpackConfig(defines, filename) {
   );
   return {
     mode: "production",
-    devtool: !defines.CHROME && !defines.TESTING ? "source-map" : false,
+    devtool: false,
     optimization: { minimize: false, mangleExports: false },
     experiments: { outputModule: true },
     externalsType: "module",
     externals: { "pdfjs-dist": "../build/pdf.mjs" },
     output: {
-      filename,
+      filename: "viewer.mjs",
       globalObject: "globalThis",
       library: { type: "module" },
     },
@@ -192,7 +169,7 @@ function createWebpackConfig(defines, filename) {
         raw: true,
       }),
     ],
-    resolve: { alias: createWebpackAlias(defines) },
+    resolve: { alias: createWebpackAlias() },
     module: {
       parser: { javascript: { importMeta: false, url: false } },
       rules: [
@@ -201,7 +178,7 @@ function createWebpackConfig(defines, filename) {
           loader: "babel-loader",
           exclude: /node_modules[\\/]core-js/,
           options: {
-            presets: defines.CHROME ? ["@babel/preset-env"] : undefined,
+            presets: ["@babel/preset-env"],
             plugins,
             targets: BABEL_TARGETS,
           },
@@ -287,14 +264,14 @@ function writeToDirectory(readable, dest) {
   );
 }
 
-function copyCoreDistribution(dir, { legacy = false } = {}) {
+function copyCoreDistribution(dir) {
   const { version } = JSON.parse(fs.readFileSync(distManifest));
   if (version !== config.stableVersion) {
     throw new Error(
       `Expected pdfjs-dist ${config.stableVersion}, found ${version}.`
     );
   }
-  const build = path.join(PDFJS_DIST_DIR, legacy ? "legacy/build" : "build");
+  const build = path.join(PDFJS_DIST_DIR, "legacy/build");
   return ordered([
     gulp
       .src("pdf{,.worker,.renderer,.sandbox}.mjs{,.map}", {
@@ -338,21 +315,6 @@ function getArgValue(name) {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
-function getDefaultFtl() {
-  const content = fs.readFileSync("l10n/en-US/viewer.ftl").toString(),
-    stringBuf = [];
-
-  // Strip out comments and line-breaks.
-  const regExp = /^\s*#/;
-  for (const line of content.split("\n")) {
-    if (!line || regExp.test(line)) {
-      continue;
-    }
-    stringBuf.push(line);
-  }
-  return stringBuf.join("\n");
-}
-
 function copyViewerLocales(dest) {
   const viewerOutput = Object.create(null);
   const sources = [];
@@ -381,12 +343,6 @@ function copyViewerLocales(dest) {
   ]);
 }
 
-gulp.task("locale", function () {
-  const dest = "web/locale/";
-  fs.rmSync(dest, { recursive: true, force: true });
-  return copyViewerLocales(dest);
-});
-
 function discardCommentsCSS() {
   let copyrightNum = 0;
 
@@ -400,57 +356,34 @@ function discardCommentsCSS() {
   return postcssDiscardComments({ remove });
 }
 
-function preprocessViewerFile(filename, defines) {
+function preprocessViewerFile(filename) {
   const lines = [];
-  preprocess(filename, line => lines.push(line), defines);
+  preprocess(filename, line => lines.push(line), {});
   return createStringSource(
     path.basename(filename),
     `${lines.join("\n").trimEnd()}\n`
   );
 }
 
-function buildViewer(dir, defines) {
-  const imageFiles = ["web/images/*.{png,svg,gif}"];
-  if (defines.CHROME) {
-    imageFiles.push("!web/images/toolbarButton-openFile.svg");
-  }
+function buildViewer(dir, testing) {
   return ordered([
-    copyCoreDistribution(dir, { legacy: defines.CHROME }),
-    createWebpackStream(
-      "web/viewer.js",
-      createWebpackConfig(defines, "viewer.mjs")
-    ).pipe(gulp.dest(dir + "web")),
+    copyCoreDistribution(dir),
+    createWebpackStream("web/viewer.js", createWebpackConfig(testing)).pipe(
+      gulp.dest(dir + "web")
+    ),
     gulp
-      .src([...imageFiles, "web/debugger.{css,mjs}"], {
+      .src(["web/images/*.{png,svg,gif}", "web/debugger.{css,mjs}"], {
         base: "web",
         encoding: false,
       })
       .pipe(gulp.dest(dir + "web")),
     copyViewerLocales(dir + "web/locale/"),
-    preprocessViewerFile("web/viewer.html", defines).pipe(
-      gulp.dest(dir + "web")
-    ),
-    preprocessViewerFile("web/viewer.css", defines)
+    preprocessViewerFile("web/viewer.html").pipe(gulp.dest(dir + "web")),
+    preprocessViewerFile("web/viewer.css")
       .pipe(postcss([discardCommentsCSS(), autoprefixer(AUTOPREFIXER_CONFIG)]))
       .pipe(gulp.dest(dir + "web")),
   ]);
 }
-
-function buildGeneric(dir = GENERIC_DIR, { testing = false } = {}) {
-  fs.rmSync(dir, { recursive: true, force: true });
-  const defines = { ...DEFINES, GENERIC: true, TESTING: testing };
-  return ordered([
-    buildViewer(dir, defines),
-    gulp.src("LICENSE", { encoding: false }).pipe(gulp.dest(dir)),
-    gulp
-      .src("web/compressed.tracemonkey-pldi-09.pdf", { encoding: false })
-      .pipe(gulp.dest(dir + "web")),
-  ]);
-}
-
-gulp.task("generic", function generic() {
-  return buildGeneric();
-});
 
 function extensionVersion() {
   // Preserve Chrome's existing extension update sequence independently of
@@ -467,21 +400,7 @@ function extensionVersion() {
   );
 }
 
-async function buildChromiumPreferences(dir) {
-  const defines = { ...DEFINES, CHROME: true };
-  const filename = "app_options.mjs";
-  await writeToDirectory(
-    createWebpackStream(
-      "web/app_options.js",
-      createWebpackConfig(defines, filename)
-    ),
-    PREFERENCES_DIR
-  );
-
-  const url = new URL(PREFERENCES_DIR + filename, import.meta.url);
-  url.searchParams.set("id", String(defaultPreferencesId++));
-  // eslint-disable-next-line no-unsanitized/method
-  const { AppOptions, OptionKind } = await import(url.href);
+function buildChromiumPreferences(dir) {
   const preferences = AppOptions.getAll(
     OptionKind.PREFERENCE,
     /* defaultOnly = */ true
@@ -490,7 +409,7 @@ async function buildChromiumPreferences(dir) {
     throw new Error("No Chromium default preferences found.");
   }
   const schema = buildPrefsSchema(preferences);
-  await writeToDirectory(
+  return writeToDirectory(
     createStringSource(
       "preferences_schema.json",
       JSON.stringify(schema, null, 2)
@@ -499,14 +418,11 @@ async function buildChromiumPreferences(dir) {
   );
 }
 
-let defaultPreferencesId = 0;
-
 function buildChromiumViewer(dir, { testing = false } = {}) {
   fs.rmSync(dir, { recursive: true, force: true });
-  const defines = { ...DEFINES, CHROME: true, TESTING: testing };
   const version = extensionVersion();
   return ordered([
-    buildViewer(dir + "content/", defines),
+    buildViewer(dir + "content/", testing),
     gulp.src("LICENSE", { encoding: false }).pipe(gulp.dest(dir)),
     gulp
       .src("extensions/chromium/manifest.json", { encoding: false })
@@ -533,16 +449,9 @@ function chromiumPreferences() {
   return buildChromiumPreferences(CHROMIUM_DIR);
 }
 
-gulp.task("chromium", gulp.series(buildChromium, chromiumPreferences));
-gulp.task(
-  "build",
-  gulp.parallel(
-    function generic() {
-      return buildGeneric();
-    },
-    gulp.series(buildChromium, chromiumPreferences)
-  )
-);
+const chromium = gulp.series(buildChromium, chromiumPreferences);
+gulp.task("chromium", chromium);
+gulp.task("build", chromium);
 gulp.task("prefstest", function prefstest() {
   return buildChromiumPreferences(BUILD_DIR + "prefstest/");
 });
@@ -571,11 +480,10 @@ function smokeTests() {
   return runNode("test/viewer-tests.mjs", ["smoke"]);
 }
 
-gulp.task("unittest", gulp.series("locale", unitTests));
+gulp.task("unittest", unitTests);
 gulp.task(
   "integrationtest",
   gulp.series(
-    "locale",
     function chromiumTestBuild() {
       return buildChromiumViewer(CHROMIUM_TEST_DIR, { testing: true });
     },
@@ -591,11 +499,10 @@ gulp.task(
     }
   )
 );
-gulp.task("smoketest", gulp.series("locale", "build", smokeTests));
+gulp.task("smoketest", gulp.series("build", smokeTests));
 gulp.task(
   "test",
   gulp.series(
-    "locale",
     "build",
     "prefstest",
     unitTests,
@@ -604,21 +511,6 @@ gulp.task(
       return runNode("test/chromium/test-telemetry.js");
     }
   )
-);
-
-gulp.task(
-  "server",
-  gulp.series("locale", async function startServer() {
-    const { WebServer } = await import("./test/webserver.mjs");
-    const host = getArgValue("--host");
-    const port = Number(getArgValue("--port") || 8888);
-    const server = new WebServer({
-      host: host === "0" ? "0.0.0.0" : host,
-      port,
-    });
-    server.start();
-    gulp.watch("l10n/**/*.ftl", gulp.series("locale"));
-  })
 );
 
 gulp.task("lint-licenses", function (done) {
