@@ -58,15 +58,9 @@ describe("Text layer", () => {
         {
           postPageSetup: async page => {
             await page.evaluate(() => {
-              const style = document.createElement("style");
-              style.textContent = `
-                body,
-                #mainContainer {
-                  letter-spacing: 5px;
-                  word-spacing: 5px;
-                }
-              `;
-              document.documentElement.append(style);
+              document.body.style.letterSpacing = "5px";
+              document.getElementById("mainContainer").style.letterSpacing =
+                "5px";
             });
           },
         }

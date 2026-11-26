@@ -118,6 +118,11 @@ function loadAndWait(filename, selector, zoom, setups, options, viewport) {
       await setups?.postPageSetup?.(page);
 
       await page.bringToFront();
+      // Toolbar selectors can exist while Chrome is still reading preferences.
+      await page.waitForFunction(
+        () => window.PDFViewerApplication?.initialized,
+        { timeout: 15000 }
+      );
       if (selector) {
         await page.waitForSelector(selector, {
           timeout: 15000,
