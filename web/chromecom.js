@@ -14,6 +14,10 @@
  */
 /* globals chrome */
 
+import {
+  FakeMLManager,
+  FakeSignatureVerifier,
+} from "../test/integration/viewer_services.js";
 import { AppOptions } from "./app_options.js";
 import { BaseExternalServices } from "./external_services.js";
 import { BasePreferences } from "./preferences.js";
@@ -422,6 +426,17 @@ class Preferences extends BasePreferences {
 }
 
 class ExternalServices extends BaseExternalServices {
+  constructor() {
+    super();
+    if (PDFJSDev.test("TESTING")) {
+      Object.defineProperty(this, "reportText", {
+        value: data => {
+          window._reportTextData = data;
+        },
+      });
+    }
+  }
+
   initPassiveLoading() {
     ChromeCom.resolvePDFFile(
       AppOptions.get("defaultUrl"),
@@ -432,7 +447,10 @@ class ExternalServices extends BaseExternalServices {
   }
 
   async createL10n() {
-    return new GenericL10n(navigator.language);
+    return new GenericL10n(
+      (PDFJSDev.test("TESTING") && AppOptions.get("localeProperties")?.lang) ||
+        navigator.language
+    );
   }
 
   createScripting() {
@@ -442,12 +460,22 @@ class ExternalServices extends BaseExternalServices {
     );
   }
 
+  createSignatureVerifier() {
+    return PDFJSDev.test("TESTING") ? new FakeSignatureVerifier() : null;
+  }
+
   createSignatureStorage(eventBus, signal) {
     return new SignatureStorage(eventBus, signal);
   }
 }
 
 class MLManager {
+  static {
+    if (PDFJSDev.test("TESTING")) {
+      this.getFakeMLManager = options => new FakeMLManager(options);
+    }
+  }
+
   isEnabledFor(_name) {
     return false;
   }

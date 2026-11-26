@@ -340,9 +340,9 @@ const PDFViewerApplication = {
       }
       AppOptions.setAll(debugOpts);
     }
-    // It is not possible to change locale for the (various) extension builds.
     if (
-      (typeof PDFJSDev === "undefined" || PDFJSDev.test("GENERIC")) &&
+      (typeof PDFJSDev === "undefined" ||
+        PDFJSDev.test("GENERIC || TESTING")) &&
       params.has("locale")
     ) {
       AppOptions.set("localeProperties", { lang: params.get("locale") });
@@ -363,7 +363,6 @@ const PDFViewerApplication = {
       Object.assign(opts, {
         annotationEditorMode: x => parseInt(x, 10),
         capCanvasAreaFactor: x => parseInt(x, 10),
-        docBaseUrl: x => x,
         enableAltText: x => x === "true",
         enableAutoLinking: x => x === "true",
         enableComment: x => x === "true",
@@ -1066,7 +1065,12 @@ const PDFViewerApplication = {
     if (isDataScheme(url)) {
       this._hideViewBookmark();
     } else if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("CHROME")) {
-      AppOptions.set("docBaseUrl", this.baseUrl);
+      AppOptions.set(
+        "docBaseUrl",
+        (PDFJSDev.test("TESTING") &&
+          parseQueryString(location.hash.slice(1)).get("docbaseurl")) ||
+          this.baseUrl
+      );
     }
 
     let title = getPdfFilenameFromUrl(url, "");

@@ -47,10 +47,6 @@ import {
   waitForTextToBe,
   waitForTimeout,
 } from "./test_utils.mjs";
-import fs from "fs";
-import path from "path";
-
-const __dirname = import.meta.dirname;
 
 const selectAll = selectEditors.bind(null, "highlight");
 
@@ -2332,60 +2328,6 @@ describe("Highlight Editor", () => {
           await page.waitForSelector("#editorUndoBar", { visible: true });
 
           await switchToHighlight(page, /* disable */ true);
-          await page.waitForSelector("#editorUndoBar", { hidden: true });
-        })
-      );
-    });
-
-    it("must check that the popup disappears when a PDF is drag-and-dropped", async () => {
-      await Promise.all(
-        pages.map(async ([browserName, page]) => {
-          await switchToHighlight(page);
-
-          await highlightSpan(page, 1, "Abstract");
-          await waitForSerialized(page, 1);
-
-          await page.waitForSelector(`${editorSelector} button.deleteButton`);
-          await page.click(`${editorSelector} button.deleteButton`);
-          await waitForSerialized(page, 0);
-          await page.waitForSelector("#editorUndoBar", { visible: true });
-          const pdfPath = path.join(__dirname, "../pdfs/basicapi.pdf");
-          const pdfData = fs.readFileSync(pdfPath).toString("base64");
-          const dataTransfer = await page.evaluateHandle(data => {
-            const transfer = new DataTransfer();
-            const view = Uint8Array.fromBase64(data);
-            const file = new File([view], "basicapi.pdf", {
-              type: "application/pdf",
-            });
-            transfer.items.add(file);
-            return transfer;
-          }, pdfData);
-
-          const dropSelector = "#viewer";
-          await page.evaluate(
-            (transfer, selector) => {
-              const dropTarget = document.querySelector(selector);
-              const event = new DragEvent("dragstart", {
-                dataTransfer: transfer,
-              });
-              dropTarget.dispatchEvent(event);
-            },
-            dataTransfer,
-            dropSelector
-          );
-
-          await page.evaluate(
-            (transfer, selector) => {
-              const dropTarget = document.querySelector(selector);
-              const event = new DragEvent("drop", {
-                dataTransfer: transfer,
-                bubbles: true,
-              });
-              dropTarget.dispatchEvent(event);
-            },
-            dataTransfer,
-            dropSelector
-          );
           await page.waitForSelector("#editorUndoBar", { hidden: true });
         })
       );

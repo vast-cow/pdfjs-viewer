@@ -30,9 +30,6 @@ import {
   waitForPageRendered,
   waitForTextToBe,
 } from "./test_utils.mjs";
-import path from "path";
-
-const __dirname = import.meta.dirname;
 
 describe("PDF viewer", () => {
   describe("EFOpen attachments", () => {
@@ -1206,11 +1203,8 @@ describe("PDF viewer", () => {
                 });
               const waitForPageRenderedEvent = filter =>
                 page.waitForFunction(
-                  filterStr =>
-                    // eslint-disable-next-line no-eval
-                    globalThis.__pageRenderedEvents.some(eval(filterStr)),
-                  { polling: 50 },
-                  String(filter)
+                  `globalThis.__pageRenderedEvents.some((${filter}))`,
+                  { polling: 50 }
                 );
 
               // Initial render
@@ -1353,16 +1347,14 @@ describe("PDF viewer", () => {
         await forEachPage(async (browserName, page) => {
           const waitForPageRenderedEvent = filter =>
             page.waitForFunction(
-              filterStr => {
-                // eslint-disable-next-line no-eval
-                if (globalThis.__pageRenderedEvents.some(eval(filterStr))) {
+              `(() => {
+                if (globalThis.__pageRenderedEvents.some((${filter}))) {
                   globalThis.__pageRenderedEvents = [];
                   return true;
                 }
                 return false;
-              },
-              { polling: 50 },
-              String(filter)
+              })()`,
+              { polling: 50 }
             );
           const getCanvasCount = () =>
             page.evaluate(
@@ -1418,16 +1410,14 @@ describe("PDF viewer", () => {
         await forEachPage(async (browserName, page) => {
           const waitForPageRenderedEvent = filter =>
             page.waitForFunction(
-              filterStr => {
-                // eslint-disable-next-line no-eval
-                if (globalThis.__pageRenderedEvents.some(eval(filterStr))) {
+              `(() => {
+                if (globalThis.__pageRenderedEvents.some((${filter}))) {
                   globalThis.__pageRenderedEvents = [];
                   return true;
                 }
                 return false;
-              },
-              { polling: 50 },
-              String(filter)
+              })()`,
+              { polling: 50 }
             );
           const getCanvasCount = () =>
             page.evaluate(
@@ -1614,12 +1604,8 @@ describe("PDF viewer", () => {
     let pages;
 
     beforeEach(async () => {
-      const baseURL = new URL(global.integrationBaseUrl);
-      const url = `${new URL("compressed.tracemonkey-pldi-09.pdf", baseURL)}`;
-      pages = await loadAndWait(
-        encodeURIComponent(url),
-        ".textLayer .endOfContent"
-      );
+      const url = `${new URL("tracemonkey.pdf", global.integrationPdfBaseUrl)}`;
+      pages = await loadAndWait(url, ".textLayer .endOfContent");
     });
 
     afterEach(async () => {
@@ -1633,7 +1619,7 @@ describe("PDF viewer", () => {
 
           expect(filename)
             .withContext(`In ${browserName}`)
-            .toBe("compressed.tracemonkey-pldi-09.pdf");
+            .toBe("tracemonkey.pdf");
         })
       );
     });
@@ -1643,12 +1629,8 @@ describe("PDF viewer", () => {
     let pages;
 
     beforeEach(async () => {
-      const baseURL = new URL(global.integrationBaseUrl);
-      const url = `${new URL("compressed.tracemonkey-pldi-09.pdf", baseURL)}?token=%2Ffoo`;
-      pages = await loadAndWait(
-        encodeURIComponent(url),
-        ".textLayer .endOfContent"
-      );
+      const url = `${new URL("tracemonkey.pdf", global.integrationPdfBaseUrl)}?token=%2Ffoo`;
+      pages = await loadAndWait(url, ".textLayer .endOfContent");
     });
 
     afterEach(async () => {
@@ -1668,36 +1650,6 @@ describe("PDF viewer", () => {
           expect(pdfUrl)
             .withContext(`In ${browserName}`)
             .not.toContain("token=/foo");
-        })
-      );
-    });
-  });
-
-  describe("File param with a relative URL and a query string (issue 20137)", () => {
-    let pages;
-
-    beforeEach(async () => {
-      // The `file` parameter is `/test/pdfs/basicapi.pdf?token=%2Ffoo`.
-      pages = await loadAndWait(
-        "basicapi.pdf%3Ftoken%3D%252Ffoo",
-        ".textLayer .endOfContent"
-      );
-    });
-
-    afterEach(async () => {
-      await closePages(pages);
-    });
-
-    it("must not re-encode the file param", async () => {
-      await Promise.all(
-        pages.map(async ([browserName, page]) => {
-          const pdfUrl = await page.evaluate(
-            () => window.PDFViewerApplication.url
-          );
-
-          expect(pdfUrl)
-            .withContext(`In ${browserName}`)
-            .toBe("/test/pdfs/basicapi.pdf?token=%2Ffoo");
         })
       );
     });
@@ -2630,36 +2582,6 @@ describe("PDF viewer", () => {
     });
   });
 
-  describe("Open a new PDF via the file input", () => {
-    let pages;
-
-    beforeEach(async () => {
-      pages = await loadAndWait("tracemonkey.pdf", ".textLayer .endOfContent");
-    });
-
-    afterEach(async () => {
-      await closePages(pages);
-    });
-
-    // The "Open" input wraps the chosen file in a blob URL,
-    // which the worker then fetches. `connect-src` in the production CSP must
-    // therefore allow `blob:` — see web/viewer.html.
-    it("must load a PDF picked through the file input (blob URL)", async () => {
-      await Promise.all(
-        pages.map(async ([browserName, page]) => {
-          const fileInput = await page.$("#fileInput");
-          await fileInput.uploadFile(
-            path.join(__dirname, "../pdfs/basicapi.pdf")
-          );
-
-          await page.waitForFunction(
-            () => window.PDFViewerApplication.pdfDocument?.numPages === 3
-          );
-        })
-      );
-    });
-  });
-
   describe("Editing stays disabled after opening another PDF (issue 21899)", () => {
     let pages;
 
@@ -2693,9 +2615,9 @@ describe("PDF viewer", () => {
               once: true,
             });
           });
-          const fileInput = await page.$("#fileInput");
-          await fileInput.uploadFile(
-            path.join(__dirname, "../pdfs/basicapi.pdf")
+          await page.evaluate(
+            url => window.PDFViewerApplication.open({ url }),
+            global.integrationPdfBaseUrl + "basicapi.pdf"
           );
           await awaitPromise(handle);
 

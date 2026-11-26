@@ -37,6 +37,7 @@ const BUILD_DIR = "build/";
 const L10N_DIR = "l10n/";
 const GENERIC_DIR = BUILD_DIR + "generic/";
 const CHROMIUM_DIR = BUILD_DIR + "chromium/";
+const CHROMIUM_TEST_DIR = BUILD_DIR + "chromium-test/";
 const PREFERENCES_DIR = BUILD_DIR + "default_preferences/";
 
 const config = JSON.parse(fs.readFileSync("pdfjs.config"));
@@ -500,13 +501,13 @@ async function buildChromiumPreferences(dir) {
 
 let defaultPreferencesId = 0;
 
-function buildChromium() {
-  fs.rmSync(CHROMIUM_DIR, { recursive: true, force: true });
-  const defines = { ...DEFINES, CHROME: true };
+function buildChromiumViewer(dir, { testing = false } = {}) {
+  fs.rmSync(dir, { recursive: true, force: true });
+  const defines = { ...DEFINES, CHROME: true, TESTING: testing };
   const version = extensionVersion();
   return ordered([
-    buildViewer(CHROMIUM_DIR + "content/", defines),
-    gulp.src("LICENSE", { encoding: false }).pipe(gulp.dest(CHROMIUM_DIR)),
+    buildViewer(dir + "content/", defines),
+    gulp.src("LICENSE", { encoding: false }).pipe(gulp.dest(dir)),
     gulp
       .src("extensions/chromium/manifest.json", { encoding: false })
       .pipe(
@@ -514,14 +515,18 @@ function buildChromium() {
           content.toString().replaceAll("PDFJSSCRIPT_VERSION", version)
         )
       )
-      .pipe(gulp.dest(CHROMIUM_DIR)),
+      .pipe(gulp.dest(dir)),
     gulp
       .src("extensions/chromium/**/*.{html,js,css,png}", {
         base: "extensions/chromium",
         encoding: false,
       })
-      .pipe(gulp.dest(CHROMIUM_DIR)),
+      .pipe(gulp.dest(dir)),
   ]);
+}
+
+function buildChromium() {
+  return buildChromiumViewer(CHROMIUM_DIR);
 }
 
 function chromiumPreferences() {
@@ -571,8 +576,11 @@ gulp.task(
   "integrationtest",
   gulp.series(
     "locale",
-    function genericTestBuild() {
-      return buildGeneric(BUILD_DIR + "viewer-test/", { testing: true });
+    function chromiumTestBuild() {
+      return buildChromiumViewer(CHROMIUM_TEST_DIR, { testing: true });
+    },
+    function chromiumTestPreferences() {
+      return buildChromiumPreferences(CHROMIUM_TEST_DIR);
     },
     function integrationTests() {
       const filter = getArgValue("--filter");

@@ -31,6 +31,32 @@ async function decodePNG(data) {
   return { width, height, data: ctx.getImageData(0, 0, width, height).data };
 }
 
+function installViewerHooks(earlySetup, appSetup, eventBusSetup) {
+  if (earlySetup) {
+    earlySetup();
+  }
+  let app;
+  let eventBus;
+  Object.defineProperty(window, "PDFViewerApplication", {
+    get: () => app,
+    set(newValue) {
+      app = newValue;
+      if (appSetup) {
+        appSetup(app);
+      }
+      Object.defineProperty(app, "eventBus", {
+        get: () => eventBus,
+        set(newV) {
+          eventBus = newV;
+          if (eventBusSetup) {
+            eventBusSetup(eventBus);
+          }
+        },
+      });
+    },
+  });
+}
+
 function loadAndWait(filename, selector, zoom, setups, options, viewport) {
   return Promise.all(
     global.integrationSessions.map(async session => {
@@ -65,9 +91,9 @@ function loadAndWait(filename, selector, zoom, setups, options, viewport) {
         }
       }
 
-      const fileParam = filename.startsWith("http")
-        ? filename
-        : `/test/pdfs/${filename}`;
+      const fileParam = encodeURIComponent(
+        new URL(filename, global.integrationPdfBaseUrl).href
+      );
       const url = `${global.integrationBaseUrl}?file=${fileParam}#zoom=${zoom ?? "page-fit"}${app_options}`;
 
       if (setups) {
@@ -80,38 +106,10 @@ function loadAndWait(filename, selector, zoom, setups, options, viewport) {
         const { prePageSetup, appSetup, earlySetup, eventBusSetup } = setups;
         await prePageSetup?.(page);
         if (earlySetup || appSetup || eventBusSetup) {
+          // Compile the test hooks with the preload script so the extension
+          // can keep its production CSP.
           await page.evaluateOnNewDocument(
-            (eaSetup, aSetup, evSetup) => {
-              if (eaSetup) {
-                // eslint-disable-next-line no-eval
-                eval(`(${eaSetup})`)();
-              }
-              let app;
-              let eventBus;
-              Object.defineProperty(window, "PDFViewerApplication", {
-                get: () => app,
-                set(newValue) {
-                  app = newValue;
-                  if (aSetup) {
-                    // eslint-disable-next-line no-eval
-                    eval(`(${aSetup})`)(app);
-                  }
-                  Object.defineProperty(app, "eventBus", {
-                    get: () => eventBus,
-                    set(newV) {
-                      eventBus = newV;
-                      if (evSetup) {
-                        // eslint-disable-next-line no-eval
-                        eval(`(${evSetup})`)(eventBus);
-                      }
-                    },
-                  });
-                },
-              });
-            },
-            earlySetup?.toString(),
-            appSetup?.toString(),
-            eventBusSetup?.toString()
+            `(${installViewerHooks})(${earlySetup}, ${appSetup}, ${eventBusSetup})`
           );
         }
       }
@@ -122,7 +120,7 @@ function loadAndWait(filename, selector, zoom, setups, options, viewport) {
       await page.bringToFront();
       if (selector) {
         await page.waitForSelector(selector, {
-          timeout: 0,
+          timeout: 15000,
         });
       }
       return [session.name, page];
@@ -131,20 +129,24 @@ function loadAndWait(filename, selector, zoom, setups, options, viewport) {
 }
 
 function createPromise(page, callback) {
-  return page.evaluateHandle(
-    // eslint-disable-next-line no-eval
-    cb => [new Promise(eval(`(${cb})`))],
-    callback.toString()
-  );
+  return page.evaluateHandle(`[new Promise((${callback}))]`);
 }
 
-function createPromiseWithArgs(page, callback, args) {
-  return page.evaluateHandle(
-    // eslint-disable-next-line no-eval, no-shadow
-    (cb, args) => [new Promise(eval(`(${cb})`))],
-    callback.toString(),
-    args
-  );
+async function createPromiseWithArgs(page, callback, args) {
+  const executor = await page.evaluateHandle(`(${callback})`);
+  try {
+    return await page.evaluateHandle(
+      (cb, params) => [
+        new Promise((resolve, reject) => {
+          cb(resolve, reject, params);
+        }),
+      ],
+      executor,
+      args
+    );
+  } finally {
+    await executor.dispose();
+  }
 }
 
 function awaitPromise(promise) {
@@ -159,6 +161,9 @@ async function closeSinglePage(page) {
   await page.evaluate(async () => {
     await window.PDFViewerApplication.testingClose();
     window.localStorage.clear();
+    await (
+      globalThis.chrome.storage.sync || globalThis.chrome.storage.local
+    ).clear();
   });
   await page.close({ runBeforeUnload: false });
 }
@@ -176,21 +181,25 @@ async function waitForSandboxTrip(page) {
 }
 
 async function waitForDOMMutation(page, callback) {
-  return page.evaluateHandle(
-    cb => [
-      new Promise(resolve => {
-        const mutationObserver = new MutationObserver(mutationList => {
-          // eslint-disable-next-line no-eval
-          if (eval(`(${cb})`)(mutationList)) {
-            mutationObserver.disconnect();
-            resolve();
-          }
-        });
-        mutationObserver.observe(document, { childList: true, subtree: true });
-      }),
-    ],
-    callback.toString()
-  );
+  const validator = await page.evaluateHandle(`(${callback})`);
+  try {
+    return await page.evaluateHandle(
+      validate => [
+        new Promise(resolve => {
+          const observer = new MutationObserver(mutations => {
+            if (validate(mutations)) {
+              observer.disconnect();
+              resolve();
+            }
+          });
+          observer.observe(document, { childList: true, subtree: true });
+        }),
+      ],
+      validator
+    );
+  } finally {
+    await validator.dispose();
+  }
 }
 
 function waitForTimeout(milliseconds) {
@@ -297,6 +306,8 @@ async function waitForEvent({
   validator = null,
   timeout = 5000,
 }) {
+  const validatorHandle =
+    validator && (await page.evaluateHandle(`(${validator})`));
   const handle = await page.evaluateHandle(
     (name, sel, validate, timeOut) => {
       let callback = null,
@@ -312,8 +323,7 @@ async function waitForEvent({
               if (timeoutId) {
                 clearTimeout(timeoutId);
               }
-              // eslint-disable-next-line no-eval
-              resolve(validate ? eval(`(${validate})`)(e) : true);
+              resolve(validate ? validate(e) : true);
             };
             element.addEventListener(name, callback, { once: true });
           }),
@@ -328,10 +338,11 @@ async function waitForEvent({
     },
     eventName,
     selector,
-    validator ? validator.toString() : null,
+    validatorHandle,
     timeout
   );
 
+  await validatorHandle?.dispose();
   await action();
 
   const success = await awaitPromise(handle);
@@ -386,18 +397,22 @@ async function waitForSerialized(page, nEntries) {
 }
 
 async function applyFunctionToEditor(page, editorId, func) {
-  return page.evaluate(
-    (id, f) => {
-      const editor =
-        window.PDFViewerApplication.pdfDocument.annotationStorage.getRawValue(
-          id
-        );
-      // eslint-disable-next-line no-eval
-      eval(`(${f})`)(editor);
-    },
-    editorId,
-    func.toString()
-  );
+  const executor = await page.evaluateHandle(`(${func})`);
+  try {
+    return await page.evaluate(
+      (id, f) => {
+        const editor =
+          window.PDFViewerApplication.pdfDocument.annotationStorage.getRawValue(
+            id
+          );
+        f(editor);
+      },
+      editorId,
+      executor
+    );
+  } finally {
+    await executor.dispose();
+  }
 }
 
 async function selectEditor(page, selector, count = 1) {
@@ -515,19 +530,29 @@ function getAnnotationStorage(page) {
   );
 }
 
-function waitForEntryInStorage(page, key, value, checker = (x, y) => x === y) {
-  return page.waitForFunction(
-    (k, v, c) => {
-      const { map } =
-        window.PDFViewerApplication.pdfDocument.annotationStorage.serializable;
-      // eslint-disable-next-line no-eval
-      return map && eval(`(${c})`)(JSON.stringify(map.get(k)), v);
-    },
-    {},
-    key,
-    JSON.stringify(value),
-    checker.toString()
-  );
+async function waitForEntryInStorage(
+  page,
+  key,
+  value,
+  checker = (x, y) => x === y
+) {
+  const check = await page.evaluateHandle(`(${checker})`);
+  try {
+    return await page.waitForFunction(
+      (k, v, c) => {
+        const { map } =
+          window.PDFViewerApplication.pdfDocument.annotationStorage
+            .serializable;
+        return map && c(JSON.stringify(map.get(k)), v);
+      },
+      {},
+      key,
+      JSON.stringify(value),
+      check
+    );
+  } finally {
+    await check.dispose();
+  }
 }
 
 function getEditors(page, kind) {

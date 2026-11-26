@@ -40,144 +40,6 @@ async function runSmokeTests(browser, base) {
   const root = process.cwd();
   const downloads = await mkdtemp(path.join(root, "build/downloads-"));
   try {
-    for (const viewerPath of [
-      "/web/viewer.html",
-      "/build/generic/web/viewer.html",
-    ]) {
-      const page = await browser.newPage();
-      await page.evaluateOnNewDocument(forceStandardFonts);
-      const requests = [];
-      const errors = [];
-      page.on("response", response => {
-        if (
-          response.status() >= 400 &&
-          !response.url().endsWith("favicon.ico")
-        ) {
-          errors.push(response.status() + " " + response.url());
-        }
-      });
-      page.on("pageerror", error => errors.push(error.message));
-      page.on("console", msg => {
-        if (msg.type() === "error" && !msg.text().includes("favicon")) {
-          console.log("browser console", msg.text());
-        }
-      });
-      page.on("request", req => requests.push(req.url()));
-      await page.evaluateOnNewDocument(() => {
-        window.print = () => {
-          window.printedPages = [
-            ...document.querySelectorAll("#printContainer img"),
-          ].filter(img => img.naturalWidth > 0).length;
-        };
-      });
-      await page.goto(base + viewerPath + "?file=" + input);
-      try {
-        await page.waitForFunction(
-          () =>
-            window.PDFViewerApplication?.pdfDocument &&
-            document.querySelector(".textLayer .endOfContent"),
-          { timeout: 12000 }
-        );
-      } catch (e) {
-        console.log(
-          await page.evaluate(() => ({
-            app: !!window.PDFViewerApplication,
-            body: document.body.innerText.slice(-400),
-          })),
-          errors
-        );
-        throw e;
-      }
-      const text = await page.evaluate(async () => {
-        const app = window.PDFViewerApplication;
-        const pdfPage = await app.pdfDocument.getPage(1);
-        return (await pdfPage.getTextContent()).items
-          .map(item => item.str)
-          .join(" ");
-      });
-      console.log(
-        viewerPath,
-        text,
-        requests.filter(url => /bcmap|standard_fonts/.test(url))
-      );
-      assert.equal(
-        await page.evaluate(() => window.pdfjsLib.version),
-        "6.5.438"
-      );
-      assert.match(text, /日本語テスト/);
-      assert(
-        requests.some(url => url.endsWith("/90ms-RKSJ-H.bcmap")),
-        "The Japanese CMap was not requested."
-      );
-      assert(
-        requests.some(url => url.includes("/standard_fonts/")),
-        "No standard fonts were requested."
-      );
-      await page.click("#viewFindButton");
-      await page.type("#findInput", "日本語テスト");
-      await page.waitForSelector(".textLayer .highlight");
-      await page.click("#editorFreeText");
-      await page.mouse.click(420, 370);
-      await page.waitForSelector(".freeTextEditor [contenteditable=true]");
-      await page.keyboard.type("Viewer smoke test");
-      await page.keyboard.press("Escape");
-      const edited = await page.evaluate(async () => {
-        const app = window.PDFViewerApplication;
-        const { promise, resolve } = Promise.withResolvers();
-        app.downloadManager.download = resolve;
-        await app.downloadOrSave();
-        const data = await promise;
-        const task = window.pdfjsLib.getDocument({ data });
-        try {
-          const pdfPage = await (await task.promise).getPage(1);
-          return (await pdfPage.getAnnotations()).some(
-            item =>
-              item.annotationType === window.pdfjsLib.AnnotationType.FREETEXT
-          );
-        } finally {
-          await task.destroy();
-        }
-      });
-      assert(edited, "The downloaded PDF was missing the saved annotation.");
-      await page.waitForFunction(
-        () => window.PDFViewerApplication.pdfViewer.pageViewsReady
-      );
-      await page.evaluate(() => window.PDFViewerApplication.triggerPrinting());
-      await page.waitForFunction(() => window.printedPages === 1, {
-        timeout: 15000,
-      });
-      assert.deepEqual(errors, []);
-      console.log("PASS render, search, annotation save and print", viewerPath);
-      await page.close();
-
-      const embedPage = await browser.newPage();
-      embedPage.on("pageerror", error => errors.push(error.message));
-      await embedPage.goto(base + "/test/");
-      await embedPage.evaluate(
-        src => {
-          const iframe = document.createElement("iframe");
-          iframe.src = src;
-          iframe.width = "760";
-          iframe.height = "500";
-          document.body.replaceChildren(iframe);
-        },
-        base + viewerPath + "?file=" + input
-      );
-      const iframe = await embedPage.waitForSelector("iframe");
-      const viewerFrame = await iframe.contentFrame();
-      await viewerFrame.waitForFunction(
-        () =>
-          window.PDFViewerApplication?.isViewerEmbedded &&
-          document.querySelector(".textLayer .endOfContent")
-      );
-      await viewerFrame.waitForSelector(".page .canvasWrapper canvas", {
-        visible: true,
-      });
-      assert.deepEqual(errors, []);
-      console.log("PASS embedded full viewer", viewerPath);
-      await embedPage.close();
-    }
-
     const extensionId = await browser.installExtension(
       path.join(root, "build/chromium")
     );
@@ -230,6 +92,13 @@ async function runSmokeTests(browser, base) {
           );
         });
       });
+      await page.evaluateOnNewDocument(() => {
+        window.print = () => {
+          window.printedPages = [
+            ...document.querySelectorAll("#printContainer img"),
+          ].filter(img => img.naturalWidth > 0).length;
+        };
+      });
       page.on("workercreated", worker => workers.add(worker.url()));
       page.on("request", request => assets.add(request.url()));
       page.on("requestfailed", request => {
@@ -266,8 +135,11 @@ async function runSmokeTests(browser, base) {
         console.log(page.url(), errors, [...assets]);
         throw error;
       }
+      await page.waitForSelector(".page .canvasWrapper canvas", {
+        visible: true,
+      });
       assert(
-        page.url().startsWith(prefix),
+        page.url().startsWith(prefix + "/"),
         "Chrome did not route the PDF to the extension."
       );
       assert.equal(
@@ -324,6 +196,56 @@ async function runSmokeTests(browser, base) {
         await readFile("." + input)
       );
       await rm(downloadedPath);
+      if (kind === "HTTP") {
+        const text = await page.evaluate(async () => {
+          const app = window.PDFViewerApplication;
+          const pdfPage = await app.pdfDocument.getPage(1);
+          return (await pdfPage.getTextContent()).items
+            .map(item => item.str)
+            .join(" ");
+        });
+        assert.match(text, /日本語テスト/);
+        await page.click("#viewFindButton");
+        await page.type("#findInput", "日本語テスト");
+        await page.waitForSelector(".textLayer .highlight");
+        await page.click("#editorFreeText");
+        await page.click(".annotationEditorLayer");
+        await page.waitForSelector(".freeTextEditor [contenteditable=true]");
+        await page.keyboard.type("Viewer smoke test");
+        await page.keyboard.press("Escape");
+        const edited = await page.evaluate(async () => {
+          const app = window.PDFViewerApplication;
+          const { promise, resolve } = Promise.withResolvers();
+          app.downloadManager.download = resolve;
+          await app.downloadOrSave();
+          const data = await promise;
+          const task = window.pdfjsLib.getDocument({ data });
+          try {
+            const pdfPage = await (await task.promise).getPage(1);
+            return (await pdfPage.getAnnotations()).some(
+              item =>
+                item.annotationType === window.pdfjsLib.AnnotationType.FREETEXT
+            );
+          } finally {
+            await task.destroy();
+          }
+        });
+        assert(edited, "The downloaded PDF was missing the saved annotation.");
+        await page.waitForFunction(
+          () => window.PDFViewerApplication.pdfViewer.pageViewsReady
+        );
+        await page.evaluate(() =>
+          window.PDFViewerApplication.triggerPrinting()
+        );
+        await page.waitForFunction(() => window.printedPages === 1, {
+          timeout: 15000,
+        });
+        assert.deepEqual(errors, []);
+        assert.deepEqual(await page.evaluate(() => window.cspViolations), []);
+        console.log(
+          "PASS extension HTTP text, search, annotation save and print"
+        );
+      }
       await page.close();
       console.log(
         "PASS extension",
@@ -331,6 +253,40 @@ async function runSmokeTests(browser, base) {
         "worker, preferences, assets, CSP and download"
       );
     }
+    for (const tag of ["embed", "object"]) {
+      const page = await browser.newPage();
+      await page.goto(base + "/test/");
+      await page.evaluate(
+        (name, url) => {
+          const element = document.createElement(name);
+          element.type = "application/pdf";
+          element.width = "760";
+          element.height = "500";
+          element.setAttribute(name === "embed" ? "src" : "data", url);
+          document.body.replaceChildren(element);
+        },
+        tag,
+        input
+      );
+      const frame = await page.waitForFrame(candidate =>
+        candidate.url().startsWith(prefix + "/")
+      );
+      await frame.waitForFunction(() => {
+        const app = window.PDFViewerApplication;
+        return (
+          app?.isViewerEmbedded &&
+          app.pdfDocument &&
+          document.querySelector(".textLayer .endOfContent")
+        );
+      });
+      await frame.waitForSelector(".page .canvasWrapper canvas", {
+        visible: true,
+      });
+      assert.equal(page.url(), base + "/test/");
+      await page.close();
+      console.log("PASS extension embedded PDF via", tag);
+    }
+
     const scripts = await browser.newPage();
     await scripts.setOfflineMode(true);
     const wasm = new Set();

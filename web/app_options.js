@@ -397,7 +397,8 @@ const defaultOptions = new Map([
     "enableScripting",
     {
       /** @type {boolean} */
-      value: typeof PDFJSDev === "undefined" || !PDFJSDev.test("CHROME"),
+      value:
+        typeof PDFJSDev === "undefined" || PDFJSDev.test("!CHROME || TESTING"),
       kind: OptionKind.VIEWER + OptionKind.PREFERENCE,
     },
   ],

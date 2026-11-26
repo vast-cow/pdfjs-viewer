@@ -22,6 +22,7 @@ import {
 } from "./downloadutils.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import path from "node:path";
 import puppeteer from "puppeteer";
 import { runSmokeTests } from "./smoke.mjs";
 import { WebServer } from "./webserver.mjs";
@@ -44,7 +45,11 @@ async function runUnitTests(browser, origin) {
 
 async function runIntegrationTests(browser, origin, filter) {
   const { runTests } = await import("./integration/jasmine-boot.js");
-  globalThis.integrationBaseUrl = origin + "/build/viewer-test/web/viewer.html";
+  const extensionId = await browser.installExtension(
+    path.resolve("build/chromium-test")
+  );
+  globalThis.integrationBaseUrl = `chrome-extension://${extensionId}/content/web/viewer.html`;
+  globalThis.integrationPdfBaseUrl = origin + "/test/pdfs/";
   globalThis.integrationSessions = [
     { name: "chrome", browserType: "chrome", browser },
   ];
@@ -91,7 +96,7 @@ if (mode === "fixtures") {
       env: integration ? { ...process.env, TZ: "UTC" } : process.env,
       defaultViewport: integration ? null : undefined,
       pipe: true,
-      enableExtensions: mode === "smoke",
+      enableExtensions: integration || mode === "smoke",
       args,
     });
     try {

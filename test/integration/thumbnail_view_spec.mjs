@@ -67,9 +67,12 @@ describe("PDF Thumbnail View", () => {
 
           await waitForThumbnailVisible(page, 1);
 
-          await page.waitForSelector(`${thumbSelector}[src^="blob:http:"]`, {
-            visible: true,
-          });
+          await page.waitForSelector(
+            `${thumbSelector}[src^="blob:chrome-extension:"]`,
+            {
+              visible: true,
+            }
+          );
 
           await waitForTooltipToBe(
             page,
@@ -136,7 +139,7 @@ describe("PDF Thumbnail View", () => {
               { visible: true }
             );
             await page.waitForSelector(
-              `${thumbSelector} > img[src^="blob:http:"]`,
+              `${thumbSelector} > img[src^="blob:chrome-extension:"]`,
               {
                 visible: true,
               }

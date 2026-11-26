@@ -86,9 +86,8 @@ async function waitForThumbnailVisible(page, pageNums) {
 function waitForPagesEdited(page, type) {
   return createPromiseWithArgs(
     page,
-    resolve => {
+    (resolve, reject, args) => {
       const listener = ({ pagesMapper, type: ty }) => {
-        // eslint-disable-next-line no-undef
         if (args[0] && args[0] !== ty) {
           return;
         }
@@ -1411,7 +1410,7 @@ describe("Reorganize Pages View", () => {
 
           for (let i = 1; i <= 2; i++) {
             await page.waitForSelector(
-              `${getThumbnailSelector(i)} > img[src^="blob:http:"]`,
+              `${getThumbnailSelector(i)} > img[src^="blob:chrome-extension:"]`,
               { visible: true }
             );
           }
@@ -1427,7 +1426,7 @@ describe("Reorganize Pages View", () => {
 
           for (let i = 1; i <= 2; i++) {
             await page.waitForSelector(
-              `${getThumbnailSelector(i)} > img[src^="blob:http:"]`,
+              `${getThumbnailSelector(i)} > img[src^="blob:chrome-extension:"]`,
               { visible: true }
             );
           }
@@ -2523,7 +2522,7 @@ describe("Reorganize Pages View", () => {
           // Wait for both thumbnails to be fully rendered.
           for (let i = 1; i <= 2; i++) {
             await page.waitForSelector(
-              `${getThumbnailSelector(i)} > img[src^="blob:http:"]`,
+              `${getThumbnailSelector(i)} > img[src^="blob:chrome-extension:"]`,
               { visible: true }
             );
           }
@@ -2567,7 +2566,7 @@ describe("Reorganize Pages View", () => {
           // The thumbnail at position 1 (the pasted copy) must still be
           // rendered and visible with a valid image source.
           await page.waitForSelector(
-            `${getThumbnailSelector(1)} > img[src^="blob:http:"]`,
+            `${getThumbnailSelector(1)} > img[src^="blob:chrome-extension:"]`,
             { visible: true }
           );
         })
