@@ -710,7 +710,7 @@ class PDFThumbnailViewer {
       return canvas.transferToImageBitmap();
     }
     // createImageBitmap doesn't work with SVG (mirroring the workaround in
-    // src/display/editor/tools.js ImageManager): load the file via an Image
+    // the display layer’s ImageManager): load the file via an Image
     // element and rasterize it through an OffscreenCanvas. The target raster
     // size uses the SVG's intrinsic dimensions, clamped so the longest side
     // falls in [1024, 4096]: large enough to avoid pixelation when fitted to

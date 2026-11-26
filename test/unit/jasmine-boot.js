@@ -35,197 +35,45 @@
  WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// Modified jasmine's boot.js file to load PDF.js libraries async.
+import { GlobalWorkerOptions } from "pdfjs-dist";
 
-"use strict";
+const env = jasmine.getEnv();
 
-import { GlobalWorkerOptions } from "pdfjs/display/worker_options.js";
-import { isNodeJS } from "../../src/shared/util.js";
-import { mergeCoverageIntoGlobal } from "../coverage_utils.js";
-import { MessageHandler } from "pdfjs/shared/message_handler.js";
-import { PDFWorker } from "pdfjs/display/api.js";
-import { RendererWorker } from "pdfjs/display/renderer_worker_proxy.js";
-import { TestReporter } from "../reporter.js";
+GlobalWorkerOptions.workerSrc =
+  "../../node_modules/pdfjs-dist/build/pdf.worker.mjs";
 
-async function initializePDFJS(callback) {
-  await Promise.all(
-    [
-      "pdfjs-test/unit/annotation_spec.js",
-      "pdfjs-test/unit/annotation_storage_spec.js",
-      "pdfjs-test/unit/api_flattening_spec.js",
-      "pdfjs-test/unit/api_spec.js",
-      "pdfjs-test/unit/app_options_spec.js",
-      "pdfjs-test/unit/autolinker_spec.js",
-      "pdfjs-test/unit/bidi_spec.js",
-      "pdfjs-test/unit/canvas_factory_spec.js",
-      "pdfjs-test/unit/catalog_spec.js",
-      "pdfjs-test/unit/cff_parser_spec.js",
-      "pdfjs-test/unit/char_code_map_spec.js",
-      "pdfjs-test/unit/cmap_spec.js",
-      "pdfjs-test/unit/colorspace_spec.js",
-      "pdfjs-test/unit/core_utils_spec.js",
-      "pdfjs-test/unit/crypto_spec.js",
-      "pdfjs-test/unit/custom_spec.js",
-      "pdfjs-test/unit/default_appearance_spec.js",
-      "pdfjs-test/unit/display_utils_spec.js",
-      "pdfjs-test/unit/document_spec.js",
-      "pdfjs-test/unit/dom_utils_spec.js",
-      "pdfjs-test/unit/editor_spec.js",
-      "pdfjs-test/unit/encodings_spec.js",
-      "pdfjs-test/unit/evaluator_spec.js",
-      "pdfjs-test/unit/event_utils_spec.js",
-      "pdfjs-test/unit/fetch_stream_spec.js",
-      "pdfjs-test/unit/font_loader_spec.js",
-      "pdfjs-test/unit/font_substitutions_spec.js",
-      "pdfjs-test/unit/fonts_spec.js",
-      "pdfjs-test/unit/function_spec.js",
-      "pdfjs-test/unit/image_resizer_spec.js",
-      "pdfjs-test/unit/image_spec.js",
-      "pdfjs-test/unit/image_utils_spec.js",
-      "pdfjs-test/unit/jpeg_stream_spec.js",
-      "pdfjs-test/unit/message_handler_spec.js",
-      "pdfjs-test/unit/metadata_spec.js",
-      "pdfjs-test/unit/murmurhash3_spec.js",
-      "pdfjs-test/unit/name_number_tree_spec.js",
-      "pdfjs-test/unit/network_spec.js",
-      "pdfjs-test/unit/network_utils_spec.js",
-      "pdfjs-test/unit/obj_bin_transform_spec.js",
-      "pdfjs-test/unit/operator_list_dependencies_spec.js",
-      "pdfjs-test/unit/parser_spec.js",
-      "pdfjs-test/unit/pattern_spec.js",
-      "pdfjs-test/unit/pdf.worker_spec.js",
-      "pdfjs-test/unit/pdf_find_controller_spec.js",
-      "pdfjs-test/unit/pdf_find_utils_spec.js",
-      "pdfjs-test/unit/pdf_history_spec.js",
-      "pdfjs-test/unit/pdf_link_service_spec.js",
-      "pdfjs-test/unit/pdf_spec.js",
-      "pdfjs-test/unit/pdf_viewer.component_spec.js",
-      "pdfjs-test/unit/pdf_viewer_spec.js",
-      "pdfjs-test/unit/postscript_spec.js",
-      "pdfjs-test/unit/primitives_spec.js",
-      "pdfjs-test/unit/scripting_spec.js",
-      "pdfjs-test/unit/scripting_utils_spec.js",
-      "pdfjs-test/unit/sound_spec.js",
-      "pdfjs-test/unit/stream_spec.js",
-      "pdfjs-test/unit/string_utils_spec.js",
-      "pdfjs-test/unit/struct_tree_layer_builder_spec.js",
-      "pdfjs-test/unit/struct_tree_spec.js",
-      "pdfjs-test/unit/svg_factory_spec.js",
-      "pdfjs-test/unit/text_layer_font_spec.js",
-      "pdfjs-test/unit/text_layer_spec.js",
-      "pdfjs-test/unit/to_unicode_map_spec.js",
-      "pdfjs-test/unit/touch_manager_spec.js",
-      "pdfjs-test/unit/type1_parser_spec.js",
-      "pdfjs-test/unit/ui_utils_spec.js",
-      "pdfjs-test/unit/unicode_spec.js",
-      "pdfjs-test/unit/util_spec.js",
-      "pdfjs-test/unit/wasm_loader_spec.js",
-      "pdfjs-test/unit/writer_spec.js",
-      "pdfjs-test/unit/xfa_formcalc_spec.js",
-      "pdfjs-test/unit/xfa_parser_spec.js",
-      "pdfjs-test/unit/xfa_serialize_data_spec.js",
-      "pdfjs-test/unit/xfa_tohtml_spec.js",
-      "pdfjs-test/unit/xml_spec.js",
-    ].map(moduleName => import(moduleName)) // eslint-disable-line no-unsanitized/method
-  );
-
-  if (isNodeJS) {
-    throw new Error(
-      "The `gulp unittest` command cannot be used in Node.js environments."
-    );
-  }
-  // Configure the worker.
-  GlobalWorkerOptions.workerSrc = "../../build/generic/build/pdf.worker.mjs";
-  GlobalWorkerOptions.rendererSrc =
-    "../../build/generic/build/pdf.renderer.mjs";
-
-  callback();
-}
-
-// Merge worker coverage into window.__coverage__ before termination.
-const pendingWorkerCoverage = new Set();
-
-function installWorkerCoverageHook(WorkerClass, targetName) {
-  const originalDestroy = WorkerClass.prototype.destroy;
-  WorkerClass.prototype.destroy = function () {
-    if (this.destroyed || !this._webWorker) {
-      return originalDestroy.call(this);
+const failures = [];
+let runs = 0;
+env.addReporter({
+  specDone(result) {
+    if (result.status !== "excluded") {
+      runs++;
     }
-    // Run destroy() synchronously while keeping the worker alive for the
-    // coverage request.
-    const webWorker = this._webWorker;
-    const realTerminate = webWorker.terminate.bind(webWorker);
-    webWorker.terminate = () => {};
-    try {
-      originalDestroy.call(this);
-    } finally {
-      webWorker.terminate = realTerminate;
-    }
-    const handler = new MessageHandler("main", targetName, webWorker);
-    const promise = handler
-      .sendWithPromise("GetWorkerCoverage", null)
-      .then(mergeCoverageIntoGlobal)
-      .catch(e => {
-        console.warn(`Failed to collect ${targetName} coverage: ${e}`);
-      })
-      .finally(() => {
-        handler.destroy();
-        realTerminate();
-        pendingWorkerCoverage.delete(promise);
+    if (result.status === "failed") {
+      failures.push({
+        test: result.fullName,
+        reasons: result.failedExpectations.map(({ message }) => message),
       });
-    pendingWorkerCoverage.add(promise);
-    return undefined;
-  };
-}
+    }
+  },
+  jasmineDone(result) {
+    window.viewerUnitResults = { runs, failures, status: result.overallStatus };
+  },
+});
 
-async function flushPendingWorkerCoverage() {
-  while (pendingWorkerCoverage.size > 0) {
-    await Promise.allSettled(pendingWorkerCoverage);
-  }
-}
-
-(function () {
-  const env = jasmine.getEnv();
-
-  // Runner Parameters
-  const urls = new jasmine.HtmlReporterV2Urls();
-
-  env.configure(urls.configFromCurrentUrl());
-
-  // Reporters
-  const htmlReporter = new jasmine.HtmlReporterV2({ env, urls });
-
-  env.addReporter(htmlReporter);
-
-  if (window.__coverage__) {
-    // Merge worker coverage before TestReporter triggers browser teardown.
-    env.addReporter({ jasmineDone: flushPendingWorkerCoverage });
-  }
-
-  if (urls.queryString.getParam("browser")) {
-    const testReporter = new TestReporter(urls.queryString.getParam("browser"));
-    env.addReporter(testReporter);
-  }
-
-  // Sets longer timeout.
-  jasmine.DEFAULT_TIMEOUT_INTERVAL = 30000;
-
-  function unitTestInit() {
-    initializePDFJS(function () {
-      if (window.__coverage__) {
-        installWorkerCoverageHook(PDFWorker, "worker");
-        installWorkerCoverageHook(RendererWorker, "renderer");
-      }
-      env.execute();
-    });
-  }
-
-  if (
-    document.readyState === "interactive" ||
-    document.readyState === "complete"
-  ) {
-    unitTestInit();
-  } else {
-    document.addEventListener("DOMContentLoaded", unitTestInit, true);
-  }
-})();
+await Promise.all(
+  [
+    "./app_options_spec.js",
+    "./autolinker_spec.js",
+    "./event_utils_spec.js",
+    "./pdf_find_controller_spec.js",
+    "./pdf_find_utils_spec.js",
+    "./pdf_history_spec.js",
+    "./pdf_link_service_spec.js",
+    "./pdf_viewer.component_spec.js",
+    "./pdf_viewer_spec.js",
+    "./struct_tree_layer_builder_spec.js",
+    "./ui_utils_spec.js",
+  ].map(filename => import(filename)) // eslint-disable-line no-unsanitized/method
+);
+await env.execute();

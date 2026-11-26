@@ -3,7 +3,6 @@
   <head>
     <title>PDF.js unit tests</title>
 
-    <link rel="stylesheet" href="../../web/text_layer_builder.css" />
     <link rel="stylesheet" type="text/css" href="../../node_modules/jasmine-core/lib/jasmine-core/jasmine.css" />
 
     <script src="../../node_modules/jasmine-core/lib/jasmine-core/jasmine.js"></script>
@@ -12,18 +11,13 @@
     <script type="importmap">
       {
         "imports": {
-          "pdfjs/": "../../src/",
-          "pdfjs-lib": "../../src/pdf.js",
+          "pdfjs-dist": "../../node_modules/pdfjs-dist/build/pdf.mjs",
           "pdfjs-web/": "../../web/",
           "pdfjs-test/": "../",
 
           "fluent-bundle": "../../node_modules/@fluent/bundle/esm/index.js",
           "fluent-dom": "../../node_modules/@fluent/dom/esm/index.js",
           "cached-iterable": "../../node_modules/cached-iterable/src/index.mjs",
-
-          "display-binary_data_factory": "../../src/display/binary_data_factory.js",
-          "display-network_stream": "../../src/display/network_stream.js",
-          "display-node_utils": "../../src/display/stubs.js",
 
           "web-alt_text_manager": "../../web/alt_text_manager.js",
           "web-annotation_editor_params": "../../web/annotation_editor_params.js",

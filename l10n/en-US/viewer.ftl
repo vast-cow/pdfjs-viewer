@@ -334,6 +334,12 @@ pdfjs-editor-highlight-editor =
 pdfjs-editor-ink-editor =
     .aria-label = Drawing editor
 
+# Used by the signature editor in pdfjs-dist 6.5.438.
+# Variables:
+#   $description (String) - a string describing/labeling the signature.
+pdfjs-editor-signature-editor1 =
+    .aria-description = Signature editor: { $description }
+
 # Used when a signature editor is selected/hovered.
 # Variables:
 #   $description (String) - a string describing/labeling the signature.

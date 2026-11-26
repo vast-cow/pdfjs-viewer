@@ -19,14 +19,16 @@ import assert from "assert";
 import fs from "fs";
 import vm from "vm";
 
-var SRC_DIR = __dirname + "/../../";
 var telemetryJsPath = "extensions/chromium/telemetry.js";
-var telemetryJsSource = fs.readFileSync(SRC_DIR + telemetryJsPath);
+var telemetryJsSource = fs.readFileSync(
+  new URL("../../" + telemetryJsPath, import.meta.url),
+  "utf8"
+);
 var telemetryScript = new vm.Script(telemetryJsSource, {
   filename: telemetryJsPath,
   displayErrors: true,
 });
-var LOG_URL = /LOG_URL = '([^']+)'/.exec(telemetryJsSource)[1];
+var LOG_URL = /LOG_URL = "([^"]+)"/.exec(telemetryJsSource)[1];
 
 // Create a minimal extension global that mocks the extension environment that
 // is used by telemetry.js
@@ -48,18 +50,25 @@ function createExtensionGlobal() {
   };
 
   function createStorageAPI() {
-    var storageArea = {};
-    storageArea.get = function (key, callback) {
-      assert.equal(key, "disableTelemetry");
-      // chrome.storage.*. is async, but we make it synchronous to ease testing.
-      callback(storageArea.mock_data);
+    return {
+      get(key, callback) {
+        if (typeof key === "string") {
+          assert.equal(key, "disableTelemetry");
+          callback(this.mock_data);
+        } else {
+          callback({ ...key, ...this.mock_data });
+        }
+      },
+      set(items) {
+        this.mock_data = { ...this.mock_data, ...items };
+      },
     };
-    return storageArea;
   }
   window.chrome.storage = {};
   window.chrome.storage.managed = createStorageAPI();
   window.chrome.storage.local = createStorageAPI();
   window.chrome.storage.sync = createStorageAPI();
+  window.chrome.storage.session = createStorageAPI();
 
   // Other DOM.
   window.navigator = {};
@@ -67,7 +76,6 @@ function createExtensionGlobal() {
   window.navigator.userAgent =
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " +
     "Chrome/50.0.2661.94 Safari/537.36";
-  window.localStorage = {};
 
   var getRandomValues_state = 0;
   window.crypto = {};
@@ -81,12 +89,6 @@ function createExtensionGlobal() {
   };
 
   // Network-related mocks.
-  window.Request = {};
-  window.Request.prototype = {
-    get mode() {
-      throw new TypeError("Illegal invocation");
-    },
-  };
   window.fetch = function (url, options) {
     assert.equal(url, LOG_URL);
     assert.equal(options.method, "POST");
@@ -101,51 +103,31 @@ function createExtensionGlobal() {
     });
     return headers;
   };
-  window.XMLHttpRequest = function () {
-    var invoked = {
-      open: false,
-      send: false,
-    };
-    var headers = {};
-    return {
-      open(method, url) {
-        assert.equal(invoked.open, false);
-        invoked.open = true;
-        assert.equal(method, "POST");
-        assert.equal(url, LOG_URL);
-      },
-      setRequestHeader(k, v) {
-        assert.equal(invoked.open, true);
-        headers[k] = String(v);
-      },
-      send(body) {
-        assert.equal(invoked.open, true);
-        assert.equal(invoked.send, false);
-        invoked.send = true;
-        assert.ok(!body);
-        test_requests.push(headers);
-      },
-    };
-  };
-
   // Time-related logic.
-  var timers = [];
-  window.setInterval = function (callback, ms) {
-    assert.equal(typeof callback, "function");
-    timers.push(callback);
+  let alarmListener;
+  window.chrome.alarms = {
+    onAlarm: {
+      addListener(listener) {
+        alarmListener = listener;
+      },
+    },
+    clear() {},
+    create() {},
   };
   window.Date = {
     test_now_value: Date.now(),
     now: () => window.Date.test_now_value,
   };
   window.test_fireTimers = function () {
-    assert.ok(timers.length);
-    timers.forEach(timer => {
-      timer();
-    });
+    alarmListener({ name: "maybeSendPing" });
   };
 
   return window;
+}
+
+function restartBackground(window) {
+  window.chrome.storage.session.mock_data = {};
+  telemetryScript.runInNewContext(window);
 }
 
 // Simulate an update of the browser.
@@ -160,7 +142,7 @@ var tests = [
   function test_first_run() {
     // Default settings, run extension for the first time.
     var window = createExtensionGlobal();
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -173,14 +155,14 @@ var tests = [
     // The extension should not send any requests when in incognito mode.
     var window = createExtensionGlobal();
     window.chrome.extension.inIncognitoContext = true;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, []);
   },
 
   function test_storage_managed_unavailable() {
     var window = createExtensionGlobal();
     delete window.chrome.storage.managed;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -194,7 +176,7 @@ var tests = [
     window.chrome.storage.managed.mock_data = {
       disableTelemetry: true,
     };
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, []);
   },
 
@@ -203,7 +185,7 @@ var tests = [
     window.chrome.storage.local.mock_data = {
       disableTelemetry: true,
     };
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, []);
   },
 
@@ -215,7 +197,7 @@ var tests = [
     window.chrome.storage.sync.mock_data = {
       disableTelemetry: false,
     };
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -226,8 +208,8 @@ var tests = [
 
   function test_run_extension_again() {
     var window = createExtensionGlobal();
-    telemetryScript.runInNewContext(window);
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
+    restartBackground(window);
     // Only one request should be sent because of rate-limiting.
     assert.deepEqual(window.test_requests, [
       {
@@ -238,7 +220,7 @@ var tests = [
 
     // Simulate that quite some hours passed, but it's still rate-limited.
     window.Date.test_now_value += 11 * 36e5;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     // Only one request should be sent because of rate-limiting.
     assert.deepEqual(window.test_requests, [
       {
@@ -249,7 +231,7 @@ var tests = [
 
     // Another hour passes and the request should not be rate-limited any more.
     window.Date.test_now_value += 1 * 36e5;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -264,7 +246,7 @@ var tests = [
 
   function test_running_for_a_while() {
     var window = createExtensionGlobal();
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -300,9 +282,9 @@ var tests = [
 
   function test_browser_update() {
     var window = createExtensionGlobal();
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     updateBrowser(window);
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -318,16 +300,16 @@ var tests = [
 
   function test_browser_update_between_pref_toggle() {
     var window = createExtensionGlobal();
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     window.chrome.storage.local.mock_data = {
       disableTelemetry: true,
     };
     updateBrowser(window);
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     window.chrome.storage.local.mock_data = {
       disableTelemetry: false,
     };
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -344,12 +326,12 @@ var tests = [
 
   function test_extension_update() {
     var window = createExtensionGlobal();
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     window.chrome.runtime.getManifest = function () {
       return { version: "1.0.1" };
     };
     window.Date.test_now_value += 12 * 36e5;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",
@@ -371,64 +353,21 @@ var tests = [
       didWarn = true;
     };
     window.chrome.runtime.id = "abcdefghijklmnopabcdefghijklmnop";
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, []);
     assert.ok(didWarn);
-  },
-
-  function test_fetch_is_supported() {
-    var window = createExtensionGlobal();
-    // XMLHttpRequest should not be called when fetch is available. So removing
-    // the XMLHttpRequest API should not change behavior.
-    delete window.XMLHttpRequest;
-    telemetryScript.runInNewContext(window);
-    assert.deepEqual(window.test_requests, [
-      {
-        "Deduplication-Id": "4242424242",
-        "Extension-Version": "1.0.0",
-      },
-    ]);
-  },
-
-  function test_fetch_not_supported() {
-    var window = createExtensionGlobal();
-    delete window.fetch;
-    delete window.Request;
-    delete window.Headers;
-    telemetryScript.runInNewContext(window);
-    assert.deepEqual(window.test_requests, [
-      {
-        "Deduplication-Id": "4242424242",
-        "Extension-Version": "1.0.0",
-      },
-    ]);
-  },
-
-  function test_fetch_mode_not_supported() {
-    var window = createExtensionGlobal();
-    delete window.Request.prototype.mode;
-    window.fetch = function () {
-      throw new Error("Unexpected call to fetch!");
-    };
-    telemetryScript.runInNewContext(window);
-    assert.deepEqual(window.test_requests, [
-      {
-        "Deduplication-Id": "4242424242",
-        "Extension-Version": "1.0.0",
-      },
-    ]);
   },
 
   function test_network_offline() {
     var window = createExtensionGlobal();
     // Simulate that the network is down for sure.
     window.navigator.onLine = false;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, []);
 
     // Simulate that the network might be up.
     window.navigator.onLine = true;
-    telemetryScript.runInNewContext(window);
+    restartBackground(window);
     assert.deepEqual(window.test_requests, [
       {
         "Deduplication-Id": "4242424242",

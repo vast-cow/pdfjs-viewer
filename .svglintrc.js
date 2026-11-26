@@ -21,12 +21,9 @@ export default {
   ignore: [
     "build/**",
     "l10n/**",
-    "docs/**",
     "node_modules/**",
-    "external/bcmaps/**",
     "external/builder/fixtures/**",
     "external/builder/fixtures_babel/**",
-    "external/quickjs/**",
     "test/tmp/**",
     "test/pdfs/**",
     "web/locale/**",

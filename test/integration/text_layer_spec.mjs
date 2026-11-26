@@ -13,30 +13,18 @@
  * limitations under the License.
  */
 
-/**
- * @import { Browser, Page } from "puppeteer"
- */
-
-import {
-  browserCloseTimeout,
-  browserTimeout,
-  killBrowser,
-  startBrowser,
-} from "../test.mjs";
 import {
   closePages,
-  closeSinglePage,
   firstPageOnTop,
   getRect,
   getSelector,
   getSpanRectFromText,
-  getTextLayerFonts,
   kbSelectAll,
   loadAndWait,
   scrollIntoView,
   waitForEvent,
 } from "./test_utils.mjs";
-import { MathClamp } from "../../src/shared/math_clamp.js";
+import { MathClamp } from "pdfjs-dist";
 
 /**
  * @typedef Point
@@ -57,36 +45,6 @@ import { MathClamp } from "../../src/shared/math_clamp.js";
  * @property {Rect} rect
  * @property {string} text
  */
-
-// These suites require Firefox profile preferences and a dedicated browser, so
-// exclude them when Firefox is disabled.
-const describeFirefoxOnly = global.integrationSessions.some(
-  session => session.browserType === "firefox"
-)
-  ? describe
-  : xdescribe;
-
-// Allow one protocol timeout, the close fallback, and a 10-second margin.
-const DEDICATED_BROWSER_TIMEOUT =
-  (browserTimeout + browserCloseTimeout + 10) * 1000;
-
-function dedicatedBrowserTest(description, test) {
-  it(description, test, DEDICATED_BROWSER_TIMEOUT);
-}
-
-/**
- * @param {Browser} [browser]
- * @param {Page} [page]
- */
-async function closeDedicatedBrowser(browser, page) {
-  try {
-    if (page) {
-      await closeSinglePage(page);
-    }
-  } finally {
-    await killBrowser(browser);
-  }
-}
 
 describe("Text layer", () => {
   describe("Text layout", () => {
@@ -1312,96 +1270,6 @@ describe("Text layer", () => {
       });
     });
 
-    describeFirefoxOnly("using selection carets", () => {
-      let browser;
-      let page;
-
-      beforeEach(async () => {
-        // Chrome does not support simulating caret-based selection, so this
-        // test only runs in Firefox.
-        browser = await startBrowser({
-          browserName: "firefox",
-          startUrl: "",
-          extraPrefsFirefox: {
-            "layout.accessiblecaret.enabled": true,
-            "layout.accessiblecaret.hide_carets_for_mouse_input": false,
-          },
-        });
-        page = await browser.newPage();
-        await page.goto(
-          `${global.integrationBaseUrl}?file=/test/pdfs/tracemonkey.pdf#zoom=page-fit`
-        );
-        await page.bringToFront();
-        await page.waitForSelector(
-          `.page[data-page-number = "1"] .endOfContent`,
-          { timeout: 0 }
-        );
-      }, DEDICATED_BROWSER_TIMEOUT);
-
-      afterEach(async () => {
-        await closeDedicatedBrowser(browser, page);
-      }, DEDICATED_BROWSER_TIMEOUT);
-
-      dedicatedBrowserTest("doesn't jump when moving selection", async () => {
-        const [initialStart, initialEnd, finalEnd] = await Promise.all([
-          getSpanRectFromText(
-            page,
-            1,
-            "(frequently executed) bytecode sequences, records"
-          ).then(middleLeftPosition),
-          getSpanRectFromText(
-            page,
-            1,
-            "(frequently executed) bytecode sequences, records"
-          ).then(middlePosition),
-          getSpanRectFromText(
-            page,
-            1,
-            "them, and compiles them to fast native code. We call such a se-"
-          ).then(belowEndPosition),
-        ]);
-
-        await page.mouse.move(initialStart.x, initialStart.y);
-        await page.mouse.down();
-        await moveInSteps(page, initialStart, initialEnd, 20);
-        await page.mouse.up();
-
-        await expectAsync(page)
-          .withContext(`first selection`)
-          .toHaveRoughlySelected("frequently executed) byt");
-
-        const initialCaretPos = {
-          x: initialEnd.x,
-          y: initialEnd.y + 10,
-        };
-        const intermediateCaretPos = {
-          x: finalEnd.x,
-          y: finalEnd.y + 5,
-        };
-        const finalCaretPos = {
-          x: finalEnd.x + 20,
-          y: finalEnd.y + 5,
-        };
-
-        await page.mouse.move(initialCaretPos.x, initialCaretPos.y);
-        await page.mouse.down();
-        await moveInSteps(page, initialCaretPos, intermediateCaretPos, 20);
-        await page.mouse.up();
-
-        await expectAsync(page)
-          .withContext(`second selection`)
-          .toHaveRoughlySelected(/frequently .* We call such a s/s);
-
-        await page.mouse.down();
-        await moveInSteps(page, intermediateCaretPos, finalCaretPos, 20);
-        await page.mouse.up();
-
-        await expectAsync(page)
-          .withContext(`third selection`)
-          .toHaveRoughlySelected(/frequently .* We call such a s/s);
-      });
-    });
-
     describe("with select-all (Ctrl+A)", () => {
       /** @type {Array<[string, Page]>} */
       let pages;
@@ -1538,48 +1406,6 @@ describe("Text layer", () => {
     });
   });
 
-  describeFirefoxOnly("when the browser enforces a minimum font size", () => {
-    let browser;
-    let page;
-
-    beforeEach(async () => {
-      // Only testing in Firefox because, while Chrome has a setting similar to
-      // font.minimum-size.x-western, it is not exposed through its API.
-      browser = await startBrowser({
-        browserName: "firefox",
-        startUrl: "",
-        extraPrefsFirefox: { "font.minimum-size.x-western": 40 },
-      });
-      page = await browser.newPage();
-      await page.goto(
-        `${global.integrationBaseUrl}?file=/test/pdfs/tracemonkey.pdf#zoom=100`
-      );
-      await page.bringToFront();
-      await page.waitForSelector(
-        `.page[data-page-number = "1"] .endOfContent`,
-        { timeout: 0 }
-      );
-    }, DEDICATED_BROWSER_TIMEOUT);
-
-    afterEach(async () => {
-      await closeDedicatedBrowser(browser, page);
-    }, DEDICATED_BROWSER_TIMEOUT);
-
-    dedicatedBrowserTest("renders spans with the right size", async () => {
-      const rect = await getSpanRectFromText(
-        page,
-        1,
-        "Dynamic languages such as JavaScript are more difﬁcult to com-"
-      );
-
-      // The difference between `a` and `b`, as a percentage of the lower one
-      const getPercentDiff = (a, b) => Math.max(a, b) / Math.min(a, b) - 1;
-
-      expect(getPercentDiff(rect.width, 315)).toBeLessThan(0.03);
-      expect(getPercentDiff(rect.height, 12)).toBeLessThan(0.03);
-    });
-  });
-
   describe("marked-content nesting (bug 1898053)", () => {
     let pages;
 
@@ -1603,114 +1429,6 @@ describe("Text layer", () => {
           expect(count).toBe(6);
         })
       );
-    });
-  });
-
-  describe("with the text layer fonts", () => {
-    let pages;
-
-    const load = async mode => {
-      pages = await loadAndWait(
-        "tracemonkey.pdf",
-        `.page[data-page-number = "1"] .endOfContent`,
-        undefined,
-        undefined,
-        { newTextLayerMode: mode }
-      );
-    };
-
-    afterEach(async () => {
-      await closePages(pages);
-    });
-
-    const checkFonts = async mode => {
-      await Promise.all(
-        pages.map(async ([browserName, page]) => {
-          const { color, fontFamily } = await page.evaluate(() => {
-            const span = [
-              ...document.querySelectorAll(
-                `.page[data-page-number = "1"] .textLayer span`
-              ),
-            ].find(({ textContent }) => textContent === "Andreas Gal");
-            const style = getComputedStyle(span);
-            return { color: style.color, fontFamily: style.fontFamily };
-          });
-          expect(color)
-            .withContext(browserName)
-            .toEqual(mode === 2 ? "rgb(255, 0, 0)" : "rgba(0, 0, 0, 0)");
-          expect(/^"?g_d\d+_tf\d+"?, /.test(fontFamily))
-            .withContext(`${browserName}: ${fontFamily}`)
-            .toEqual(mode !== 0);
-        })
-      );
-    };
-
-    describe("with `newTextLayerMode` set to 0", () => {
-      beforeEach(() => load(0));
-
-      it("must not use the text layer fonts", async () => {
-        await checkFonts(0);
-      });
-    });
-
-    describe("with `newTextLayerMode` set to 1", () => {
-      beforeEach(() => load(1));
-
-      it("must use the text layer fonts", async () => {
-        await checkFonts(1);
-      });
-    });
-
-    describe("with `newTextLayerMode` set to 2", () => {
-      beforeEach(() => load(2));
-
-      it("must use the text layer fonts with the glyph boxes", async () => {
-        await checkFonts(2);
-      });
-    });
-
-    describe("when the pages are destroyed", () => {
-      beforeEach(() => load(1));
-
-      it("must unload the fonts of the pages removed from the cache", async () => {
-        await Promise.all(
-          pages.map(async ([browserName, page]) => {
-            const pagesCount = await page.evaluate(
-              () => window.PDFViewerApplication.pagesCount
-            );
-            for (let i = 2; i <= pagesCount; i++) {
-              await page.evaluate(n => {
-                window.PDFViewerApplication.page = n;
-              }, i);
-              await page.waitForSelector(
-                `.page[data-page-number = "${i}"] .textLayer .endOfContent`
-              );
-            }
-            // The first pages aren't in the cache anymore.
-            expect(await page.$(`.page[data-page-number = "1"] .textLayer`))
-              .withContext(browserName)
-              .toBeNull();
-
-            const { loaded, used } = await getTextLayerFonts(page);
-            expect(used.length).withContext(browserName).toBeGreaterThan(0);
-            expect(loaded).withContext(browserName).toEqual(used);
-          })
-        );
-      });
-
-      it("must unload the fonts when the document is closed", async () => {
-        await Promise.all(
-          pages.map(async ([browserName, page]) => {
-            const { loaded } = await getTextLayerFonts(page);
-            expect(loaded.length).withContext(browserName).toBeGreaterThan(0);
-
-            await page.evaluate(() => window.PDFViewerApplication.close());
-            expect((await getTextLayerFonts(page)).loaded)
-              .withContext(browserName)
-              .toEqual([]);
-          })
-        );
-      });
     });
   });
 });

@@ -14,7 +14,6 @@
  */
 
 import { createCanvas, loadImage } from "@napi-rs/canvas";
-import { mergeCoverageIntoGlobal } from "../coverage_utils.js";
 import os from "os";
 
 const isMac = os.platform() === "darwin";
@@ -156,50 +155,11 @@ function closePages(pages) {
   return Promise.all(pages.map(([_, page]) => closeSinglePage(page)));
 }
 
-/**
- * @param {Page} page
- * @returns {Promise<object>} The names of the loaded text layer fonts and of
- *   the ones used by the text layer spans.
- */
-function getTextLayerFonts(page) {
-  return page.evaluate(() => {
-    const isTextLayerFont = name => /^g_d\d+_tf\d+$/.test(name);
-    const loaded = [...document.fonts]
-      .map(({ family }) => family.replaceAll('"', ""))
-      .filter(isTextLayerFont);
-    const used = new Set();
-    for (const span of document.querySelectorAll(".textLayer span")) {
-      const name = span.style.fontFamily.split(",")[0].replaceAll('"', "");
-      if (isTextLayerFont(name)) {
-        used.add(name);
-      }
-    }
-    return { loaded: loaded.sort(), used: [...used].sort() };
-  });
-}
-
 async function closeSinglePage(page) {
-  const coverage = await page.evaluate(async () => {
-    // Close the viewer gracefully, and clear local storage to avoid state
-    // leaking from one test to another.
+  await page.evaluate(async () => {
     await window.PDFViewerApplication.testingClose();
     window.localStorage.clear();
-
-    // Serialize the coverage data to a JSON string because that is a lot
-    // faster/cheaper to transfer from the browser to Node.js over the WebDriver
-    // BiDi protocol, otherwise Puppeteer's (significantly slower) serialization
-    // logic kicks in (see https://github.com/puppeteer/puppeteer/issues/2427).
-    return {
-      page: window.__coverage__ ? JSON.stringify(window.__coverage__) : null,
-      workers: window.__worker_coverage__?.map(c => JSON.stringify(c)) ?? null,
-    };
   });
-
-  if (coverage.page) {
-    mergeCoverageIntoGlobal(JSON.parse(coverage.page));
-  }
-  coverage.workers?.map(c => mergeCoverageIntoGlobal(JSON.parse(c)));
-
   await page.close({ runBeforeUnload: false });
 }
 
@@ -210,13 +170,9 @@ async function waitForScripting(page) {
 }
 
 async function waitForSandboxTrip(page) {
-  const handle = await page.evaluateHandle(() => [
-    new Promise(resolve => {
-      window.addEventListener("sandboxtripend", resolve, { once: true });
-      window.PDFViewerApplication.pdfScriptingManager.sandboxTrip();
-    }),
-  ]);
-  await awaitPromise(handle);
+  await page.evaluate(() =>
+    window.PDFViewerApplication.pdfScriptingManager.sandboxTrip()
+  );
 }
 
 async function waitForDOMMutation(page, callback) {
@@ -754,14 +710,6 @@ function waitForPageRendered(page, pageNumber) {
   );
 }
 
-function waitForEditorMovedInDOM(page) {
-  return createPromise(page, resolve => {
-    window.PDFViewerApplication.eventBus.on("editormovedindom", resolve, {
-      once: true,
-    });
-  });
-}
-
 /**
  * Wait two timer turns for deferred editor DOM and focus updates.
  */
@@ -1168,18 +1116,31 @@ function waitForPositionChange(page, selector, xy) {
 async function moveEditor(page, selector, n, pressKey) {
   let xy = await getXY(page, selector);
   for (let i = 0; i < n; i++) {
-    const handle = await waitForEditorMovedInDOM(page);
     await pressKey();
-    await awaitPromise(handle);
     await waitForPositionChange(page, selector, xy);
     xy = await getXY(page, selector);
   }
 }
 
-async function getNextEditorId(page) {
-  return page.evaluate(() =>
-    window.PDFViewerApplication.pdfViewer._layerProperties.annotationEditorUIManager.getNextEditorId()
+async function createEditorAndGetSelector(page, selector, create) {
+  const existingIds = await page.$$eval(selector, editors =>
+    editors.map(({ id }) => id)
   );
+  await create();
+  const newId = await page.waitForFunction(
+    (sel, ids) =>
+      Array.from(document.querySelectorAll(sel)).find(
+        ({ id }) => id && !ids.includes(id)
+      )?.id,
+    {},
+    selector,
+    existingIds
+  );
+  try {
+    return `#${await newId.jsonValue()}`;
+  } finally {
+    await newId.dispose();
+  }
 }
 
 async function highlightSpan(
@@ -1189,15 +1150,13 @@ async function highlightSpan(
   xRatio = 0.5,
   yRatio = 0.5
 ) {
-  const nextId = await getNextEditorId(page);
   const rect = await getSpanRectFromText(page, pageIndex, text);
   const x = rect.x + rect.width * xRatio;
   const y = rect.y + rect.height * yRatio;
-  // We add a small delay between press and release to make sure that a
-  // pointerup event is triggered after selectionchange.
-  // It works with a value of 1ms, but we use 100ms to be sure.
-  await page.mouse.click(x, y, { count: 2, delay: 100 });
-  await page.waitForSelector(getEditorSelector(nextId));
+  // Let selectionchange run before pointerup.
+  await createEditorAndGetSelector(page, ".highlightEditor", () =>
+    page.mouse.click(x, y, { count: 2, delay: 100 })
+  );
 }
 
 async function showViewsManager(page) {
@@ -1261,6 +1220,7 @@ export {
   copyToClipboard,
   countSerialized,
   countStorageEntries,
+  createEditorAndGetSelector,
   createPromise,
   createPromiseWithArgs,
   decodePNG,
@@ -1274,13 +1234,11 @@ export {
   getEditors,
   getEditorSelector,
   getFirstSerialized,
-  getNextEditorId,
   getQuerySelector,
   getRect,
   getSelector,
   getSerialized,
   getSpanRectFromText,
-  getTextLayerFonts,
   getThumbnailSelector,
   getXY,
   highlightSpan,

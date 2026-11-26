@@ -21,6 +21,7 @@ import {
   copyToClipboard,
   countSerialized,
   countStorageEntries,
+  createEditorAndGetSelector,
   createPromise,
   decodePNG,
   dragAndDrop,
@@ -29,7 +30,6 @@ import {
   getEditors,
   getEditorSelector,
   getFirstSerialized,
-  getNextEditorId,
   getRect,
   getSerialized,
   isCanvasMonochrome,
@@ -118,11 +118,14 @@ const createFreeTextEditor = async ({
   data = null,
   noFocusIn = false,
 }) => {
-  const editorSelector = getEditorSelector(await getNextEditorId(page));
   const serializedCount = await countSerialized(page);
   const storageEntriesCount = await countStorageEntries(page);
 
-  await page.mouse.click(x, y);
+  const editorSelector = await createEditorAndGetSelector(
+    page,
+    ".freeTextEditor",
+    () => page.mouse.click(x, y)
+  );
   await page.waitForSelector(editorSelector, { visible: true });
   if (data) {
     await page.type(`${editorSelector} .internal`, data);

@@ -43,7 +43,6 @@ const STATIC_COMMANDS = new Set([
   "error",
   "print",
   "println",
-  "sandboxTripEnd",
 ]);
 // Layout-change guard: a gesture starting sooner than this after a script
 // changed the layout isn't honored, like `security.notification_enable_delay`
@@ -128,14 +127,10 @@ class PDFScriptingManager {
 
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
       Object.defineProperty(this, "sandboxTrip", {
+        // The published sandbox omits the testing reply. The dispatch itself
+        // resolves after synchronous sandbox updates have reached the viewer.
         value: () =>
-          setTimeout(
-            () =>
-              this.#scripting?.dispatchEventInSandbox({
-                name: "sandboxtripbegin",
-              }),
-            0
-          ),
+          this.#scripting?.dispatchEventInSandbox({ name: "sandboxtripbegin" }),
       });
     }
   }
@@ -525,6 +520,10 @@ class PDFScriptingManager {
     return this.#ready;
   }
 
+  get hasSandbox() {
+    return this.#scripting !== null;
+  }
+
   /**
    * @private
    */
@@ -549,16 +548,6 @@ class PDFScriptingManager {
     if (!id) {
       if (!STATIC_COMMANDS.has(command)) {
         this.#markLayoutChange();
-      }
-      if (
-        typeof PDFJSDev !== "undefined" &&
-        PDFJSDev.test("TESTING") &&
-        command === "sandboxTripEnd"
-      ) {
-        window.setTimeout(() => {
-          window.dispatchEvent(new CustomEvent("sandboxtripend"));
-        }, 0);
-        return;
       }
 
       switch (command) {

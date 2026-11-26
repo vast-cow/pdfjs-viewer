@@ -16,13 +16,11 @@
 // PLEASE NOTE: This code is intended for development purposes only and
 //              should NOT be used in production environments.
 
-import * as babel from "@babel/core";
 import fs from "fs";
 import fsPromises from "fs/promises";
 import http from "http";
 import path from "path";
 import { pathToFileURL } from "url";
-import { WebSocketServer } from "ws";
 
 const MIME_TYPES = {
   ".br": "application/octet-stream",
@@ -45,21 +43,18 @@ const MIME_TYPES = {
 const DEFAULT_MIME_TYPE = "application/octet-stream";
 
 class WebServer {
-  constructor({ root, host, port, cacheExpirationTime, coverageEnabled }) {
+  constructor({ root, host, port, cacheExpirationTime }) {
     const cwdURL = pathToFileURL(process.cwd()) + "/";
     this.rootURL = new URL(`${root || "."}/`, cwdURL);
     this.host = host || "localhost";
     this.port = port || 0;
     this.server = null;
-    this.wss = null;
     this.verbose = false;
     this.cacheExpirationTime = cacheExpirationTime || 0;
     this.disableRangeRequests = false;
-    this.coverageEnabled = coverageEnabled || false;
     this.hooks = {
       GET: [crossOriginHandler, redirectHandler],
       POST: [],
-      WS: [],
     };
   }
 
@@ -67,18 +62,10 @@ class WebServer {
     this.#ensureNonZeroPort();
     this.server = http.createServer(this.#handler.bind(this));
     this.server.listen(this.port, this.host, callback);
-    this.wss = new WebSocketServer({ server: this.server });
-    this.wss.on("connection", ws => {
-      for (const handler of this.hooks.WS) {
-        handler(ws);
-      }
-    });
     console.log(`Server running at http://${this.host}:${this.port}/`);
   }
 
   stop(callback) {
-    this.wss.close();
-    this.wss = null;
     this.server.close(callback);
     this.server = null;
   }
@@ -301,58 +288,7 @@ class WebServer {
     response.end("</body></html>");
   }
 
-  async #serveFile(response, fileURL, fileSize, url) {
-    // Check if we should instrument this file for coverage
-    const shouldInstrument =
-      this.coverageEnabled &&
-      url &&
-      /\.m?js$/.test(fileURL.pathname) &&
-      (url.pathname.startsWith("/src/") || url.pathname.startsWith("/web/")) &&
-      !url.pathname.includes("/test/");
-
-    if (shouldInstrument) {
-      try {
-        // Read the file content
-        const content = await fsPromises.readFile(fileURL, "utf8");
-
-        // Transform with Babel and istanbul plugin
-        const result = babel.transformSync(content, {
-          // On Windows, the file URL starts with a slash (e.g.
-          // /C:/path/to/file.js).
-          // This leading slash makes the file path invalid and causes the
-          // instrumentation to fail, so we need to remove it before passing the
-          // path.
-          filename:
-            process.platform === "win32"
-              ? fileURL.pathname.substring(1)
-              : fileURL.pathname,
-          plugins: ["babel-plugin-istanbul"],
-          sourceMaps: false,
-        });
-
-        const instrumentedCode = result.code;
-        const instrumentedSize = Buffer.byteLength(instrumentedCode, "utf8");
-
-        // Serve the instrumented code
-        response.setHeader("Content-Type", "application/javascript");
-        response.setHeader("Content-Length", instrumentedSize);
-        if (this.cacheExpirationTime > 0) {
-          const expireTime = new Date();
-          expireTime.setSeconds(
-            expireTime.getSeconds() + this.cacheExpirationTime
-          );
-          response.setHeader("Expires", expireTime.toUTCString());
-        }
-        response.writeHead(200);
-        response.end(instrumentedCode, "utf8");
-        return;
-      } catch (error) {
-        console.error(`Failed to instrument ${fileURL.pathname}:`, error);
-        // Fall through to serve the original file
-      }
-    }
-
-    // Serve the file normally
+  #serveFile(response, fileURL, fileSize) {
     const stream = fs.createReadStream(fileURL, { flags: "rs" });
     stream.on("error", error => {
       response.writeHead(500);

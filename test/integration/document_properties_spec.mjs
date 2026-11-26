@@ -172,9 +172,10 @@ describe("PDFDocumentProperties", () => {
       await Promise.all(
         pages.map(async ([browserName, page]) => {
           // Open a binary PDF document, such that `contentLength` is undefined.
-          const base64 = await fs.readFile("./pdfs/clippath.pdf", {
-            encoding: "base64",
-          });
+          const base64 = await fs.readFile(
+            new URL("../pdfs/clippath.pdf", import.meta.url),
+            { encoding: "base64" }
+          );
 
           await page.evaluate(async b64 => {
             await window.PDFViewerApplication.open({

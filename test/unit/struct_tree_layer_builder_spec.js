@@ -13,8 +13,9 @@
  * limitations under the License.
  */
 
-import { isNodeJS } from "../../src/shared/util.js";
 import { StructTreeLayerBuilder } from "../../web/struct_tree_layer_builder.js";
+
+const isNodeJS = typeof window === "undefined";
 
 describe("StructTreeLayerBuilder", function () {
   function build(structTree) {

@@ -501,8 +501,17 @@ describe("PDF viewer", () => {
             const j = buffer.indexOf(0xff0000ff);
             buffer = buffer.slice(j);
 
-            expect(buffer.every(x => x === 0xff0000ff))
-              .withContext(`In ${browserName}, in the ${i}th zoom in`)
+            // Allow one color level of edge antialiasing. An uncovered
+            // strip would expose the white canvas background.
+            const isRed = pixel =>
+              (pixel & 0xff) === 255 &&
+              ((pixel >>> 8) & 0xff) <= 1 &&
+              ((pixel >>> 16) & 0xff) <= 1 &&
+              pixel >>> 24 === 255;
+            expect(buffer.every(isRed))
+              .withContext(
+                `In ${browserName}, after zooming out ${i + 1} times`
+              )
               .toBeTrue();
 
             const currentScale = await page.evaluate(
@@ -1606,7 +1615,7 @@ describe("PDF viewer", () => {
 
     beforeEach(async () => {
       const baseURL = new URL(global.integrationBaseUrl);
-      const url = `${baseURL.origin}/build/generic/web/compressed.tracemonkey-pldi-09.pdf`;
+      const url = `${new URL("compressed.tracemonkey-pldi-09.pdf", baseURL)}`;
       pages = await loadAndWait(
         encodeURIComponent(url),
         ".textLayer .endOfContent"
@@ -1635,7 +1644,7 @@ describe("PDF viewer", () => {
 
     beforeEach(async () => {
       const baseURL = new URL(global.integrationBaseUrl);
-      const url = `${baseURL.origin}/build/generic/web/compressed.tracemonkey-pldi-09.pdf?token=%2Ffoo`;
+      const url = `${new URL("compressed.tracemonkey-pldi-09.pdf", baseURL)}?token=%2Ffoo`;
       pages = await loadAndWait(
         encodeURIComponent(url),
         ".textLayer .endOfContent"

@@ -41,12 +41,7 @@ limitations under the License.
     <script type="importmap">
       {
         "imports": {
-          "pdfjs/": "../../src/",
-          "pdfjs-lib": "../../src/pdf.js",
-
-          "display-binary_data_factory": "../../src/display/binary_data_factory.js",
-          "display-network_stream": "../../src/display/network_stream.js",
-          "display-node_utils": "../../src/display/stubs.js",
+          "pdfjs-dist": "../../node_modules/pdfjs-dist/build/pdf.mjs",
 
           "fluent-bundle": "../../node_modules/@fluent/bundle/esm/index.js",
           "fluent-dom": "../../node_modules/@fluent/dom/esm/index.js",
@@ -68,12 +63,12 @@ limitations under the License.
     </div>
 
     <script type="module">
-      import { getDocument, GlobalWorkerOptions } from "pdfjs-lib";
+      import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
       import { EventBus } from "../../web/event_utils.js";
       import { GenericL10n } from "../../web/genericl10n.js";
       import { PDFViewer } from "../../web/pdf_viewer.js";
 
-      GlobalWorkerOptions.workerSrc = "../../src/pdf.worker.js";
+      GlobalWorkerOptions.workerSrc = "../../node_modules/pdfjs-dist/build/pdf.worker.mjs";
 
       async function createViewer(container, url) {
         const abortController = new AbortController();

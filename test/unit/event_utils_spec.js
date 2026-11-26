@@ -18,7 +18,8 @@ import {
   waitOnEventOrTimeout,
   WaitOnType,
 } from "../../web/event_utils.js";
-import { isNodeJS } from "../../src/shared/util.js";
+
+const isNodeJS = typeof window === "undefined";
 
 describe("event_utils", function () {
   describe("EventBus", function () {

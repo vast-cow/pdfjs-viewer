@@ -1391,25 +1391,6 @@ const PDFViewerApplication = {
       }
     }
 
-    if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("COVERAGE")) {
-      // Collect coverage on each close; tests may load multiple documents.
-      const transport = this.pdfDocument?._transport;
-      for (const handler of [
-        transport?.messageHandler,
-        transport?.rendererWorker?.messageHandler,
-      ]) {
-        if (!handler) {
-          continue;
-        }
-        try {
-          const workerCoverage = await handler.sendWithPromise(
-            "GetWorkerCoverage",
-            null
-          );
-          (window.__worker_coverage__ ??= []).push(workerCoverage);
-        } catch {}
-      }
-    }
     const promises = [];
 
     promises.push(this.pdfLoadingTask.destroy());
@@ -1570,7 +1551,7 @@ const PDFViewerApplication = {
     );
   },
 
-  async save({ flatten = false, intent = "print" } = {}) {
+  async save() {
     if (!this.downloadManager) {
       if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
         this.eventBus.dispatch("downloadskipped", { source: this });
@@ -1584,16 +1565,9 @@ const PDFViewerApplication = {
     this._saveInProgress = true;
     // Keep the document that this save belongs to.
     const { pdfDocument } = this;
-    const isPrinting = flatten && intent === "print";
 
     try {
-      if (isPrinting) {
-        if (!(await this._dispatchWillPrintForSaving(pdfDocument))) {
-          return;
-        }
-      } else {
-        await this.pdfScriptingManager.dispatchWillSave();
-      }
+      await this.pdfScriptingManager.dispatchWillSave();
       const data = await pdfDocument.saveDocument();
       this.downloadManager.download(
         data,
@@ -1610,9 +1584,7 @@ const PDFViewerApplication = {
     } finally {
       try {
         if (pdfDocument === this.pdfDocument) {
-          await (isPrinting
-            ? this.pdfScriptingManager.dispatchDidPrint()
-            : this.pdfScriptingManager.dispatchDidSave());
+          await this.pdfScriptingManager.dispatchDidSave();
         }
       } finally {
         this._saveInProgress = false;
@@ -1636,12 +1608,10 @@ const PDFViewerApplication = {
    * single one.
    * @returns {Promise<void>}
    */
-  downloadOrSave(options) {
-    this._downloadOrSavePromise ??= this._downloadOrSave(options).finally(
-      () => {
-        this._downloadOrSavePromise = null;
-      }
-    );
+  downloadOrSave() {
+    this._downloadOrSavePromise ??= this._downloadOrSave().finally(() => {
+      this._downloadOrSavePromise = null;
+    });
     return this._downloadOrSavePromise;
   },
 
@@ -1649,7 +1619,7 @@ const PDFViewerApplication = {
    * @private
    * @returns {Promise<void>}
    */
-  async _downloadOrSave({ flatten = false, intent = "print" } = {}) {
+  async _downloadOrSave() {
     if (!this.downloadManager) {
       if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
         this.eventBus.dispatch("downloadskipped", { source: this });
@@ -1658,12 +1628,6 @@ const PDFViewerApplication = {
     }
     this.pdfViewer._layerProperties.annotationEditorUIManager?.endCurrentEditing();
 
-    // In the Firefox case, this method MUST always trigger a download.
-    // When the user is closing a modified and unsaved document, we display a
-    // prompt asking for saving or not. In case they save, we must wait for
-    // saving to complete before closing the tab.
-    // So in case this function does not trigger a download, we must trigger a
-    // a message and change PdfjsChild.sys.mjs to take it into account.
     const { classList } = this.appConfig.appContainer;
     classList.add("wait");
 
@@ -1675,34 +1639,17 @@ const PDFViewerApplication = {
         });
         await this.onSavePages({
           data: this.pdfThumbnailViewer.getStructuralChanges(),
-          flatten,
-          intent,
         });
       } else {
         const { pdfDocument } = this;
-        // Flattening requires a save even without edits.
-        const mustSave =
-          pdfDocument && (flatten || pdfDocument.annotationStorage.size > 0);
-        await (mustSave ? this.save({ flatten, intent }) : this.download());
+        const mustSave = pdfDocument?.annotationStorage.size > 0;
+        await (mustSave ? this.save() : this.download());
       }
       delete this._mergedDocumentNeedsSaving;
     } finally {
       this.setTitle();
       classList.remove("wait");
     }
-  },
-
-  /**
-   * Run WillPrint before flattening for print.
-   * @returns {Promise<boolean>} Whether this is still the active document.
-   */
-  async _dispatchWillPrintForSaving(pdfDocument) {
-    try {
-      await this.pdfScriptingManager.dispatchWillPrint();
-    } catch {
-      // Ignore script errors, as in beforePrint.
-    }
-    return pdfDocument === this.pdfDocument;
   },
 
   /**
@@ -2806,11 +2753,7 @@ const PDFViewerApplication = {
     this.pdfViewer.onPagesEdited(data);
   },
 
-  async onSavePages({
-    data: { pageInfos, copyLevels },
-    flatten = false,
-    intent = "print",
-  }) {
+  async onSavePages({ data: { pageInfos, copyLevels } }) {
     if (typeof PDFJSDev !== "undefined" && PDFJSDev.test("TESTING")) {
       return;
     }
@@ -2818,21 +2761,10 @@ const PDFViewerApplication = {
     if (!this.downloadManager || !pdfDocument) {
       return;
     }
-    const isPrinting = flatten && intent === "print";
-    let modifiedPdfBytes;
-    try {
-      if (
-        isPrinting &&
-        !(await this._dispatchWillPrintForSaving(pdfDocument))
-      ) {
-        return;
-      }
-      modifiedPdfBytes = await pdfDocument.extractPages(pageInfos, copyLevels);
-    } finally {
-      if (isPrinting && pdfDocument === this.pdfDocument) {
-        await this.pdfScriptingManager.dispatchDidPrint();
-      }
-    }
+    const modifiedPdfBytes = await pdfDocument.extractPages(
+      pageInfos,
+      copyLevels
+    );
     if (!modifiedPdfBytes) {
       console.error(
         "Something wrong happened when saving the edited PDF.\nPlease file a bug."
@@ -3033,8 +2965,15 @@ function onPageMode({ mode }) {
 }
 
 function onNamedAction(evt) {
-  // Processing a couple of named actions that might be useful, see also
-  // `PDFLinkService.executeNamedAction`.
+  // The pinned annotation layer omits the trusted-event information needed
+  // to authorize these named actions while PDF JavaScript is active.
+  if (
+    this.pdfScriptingManager.hasSandbox &&
+    (evt.action === "Print" || evt.action === "SaveAs")
+  ) {
+    return;
+  }
+  // See `PDFLinkService.executeNamedAction`.
   switch (evt.action) {
     case "GoToPage":
       this.appConfig.toolbar?.pageNumber.select();

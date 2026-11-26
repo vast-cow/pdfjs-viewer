@@ -32,22 +32,12 @@ export default [
       "package-lock.json",
       "**/build/",
       "**/l10n/",
-      "**/docs/",
       "**/node_modules/",
-      "external/bcmaps/",
-      "external/brotli/",
       "external/builder/fixtures/",
       "external/builder/fixtures_babel/",
-      "external/hellbox/",
-      "external/openjpeg/",
-      "external/qcms/",
-      "external/jbig2/",
-      "external/quickjs/",
-      "test/stats/results/",
       "test/tmp/",
       "test/pdfs/",
       "web/locale/",
-      "web/wasm/",
       "**/*~/",
       ".{claude,codex,cursor}/",
     ],
@@ -97,17 +87,6 @@ export default [
       unicorn,
     },
 
-    settings: {
-      "import-x/resolver-next": [
-        import_.createNodeResolver({
-          alias: {
-            "pdfjs-lib": [import.meta.dirname + "/web/pdfjs.js"],
-            pdfjs: [import.meta.dirname + "/src"],
-          },
-        }),
-      ],
-    },
-
     languageOptions: {
       globals: {
         ...globals.worker,
@@ -130,24 +109,11 @@ export default [
       "import/no-empty-named-blocks": "error",
       "import/no-commonjs": "error",
       "import/no-mutable-exports": "error",
-      "import/no-restricted-paths": [
-        "error",
-        {
-          zones: [
-            {
-              target: "./web",
-              from: "./src",
-              except: ["./pdf.worker.js"],
-            },
-          ],
-        },
-      ],
       "import/no-self-import": "error",
       "import/no-unresolved": [
         "error",
         {
           ignore: [
-            "^display-",
             "^web-",
             "^@csstools/postcss-light-dark-function$",
             "^fluent-bundle$",
@@ -155,7 +121,6 @@ export default [
             "^pdfjs-dist(/|$)",
             "^postcss-dir-pseudo-class$",
             "^postcss-nesting$",
-            "^postcss-values-parser$",
             "^stylelint$",
             // See https://github.com/firebase/firebase-admin-node/discussions/1359.
             "^eslint-plugin-perfectionist$",
@@ -428,12 +393,6 @@ export default [
       "template-curly-spacing": ["error", "never"],
     },
   },
-  {
-    files: jsFiles("src"),
-    rules: {
-      "no-console": "error",
-    },
-  },
 
   /* ======================================================================== *\
                                    JSDoc
@@ -518,13 +477,6 @@ export default [
     },
   },
   {
-    files: jsFiles("web/internal"),
-    rules: {
-      // The debugger imports `src/` internals directly.
-      "import/no-restricted-paths": "off",
-    },
-  },
-  {
     files: jsFiles("test/unit"),
     rules: {
       "no-console": ["error", { allow: ["warn", "error"] }],
@@ -551,27 +503,6 @@ export default [
 
   {
     files: jsFiles("external"),
-
-    languageOptions: { globals: globals.node },
-  },
-
-  /* ======================================================================== *\
-                             Examples
-  \* ======================================================================== */
-
-  {
-    files: jsFiles("examples"),
-
-    languageOptions: {
-      globals: {
-        pdfjsImageDecoders: false,
-        pdfjsLib: false,
-        pdfjsViewer: false,
-      },
-    },
-  },
-  {
-    files: [...jsFiles("examples/node"), ...jsFiles("examples/webpack")],
 
     languageOptions: { globals: globals.node },
   },

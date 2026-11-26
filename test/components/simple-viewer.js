@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-import { getDocument, GlobalWorkerOptions } from "pdfjs-lib";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import { EventBus } from "../../web/event_utils.js";
 import { GenericL10n } from "../../web/genericl10n.js";
 import { PDFFindController } from "../../web/pdf_find_controller.js";
@@ -24,16 +24,14 @@ import { PDFViewer } from "../../web/pdf_viewer.js";
 // The workerSrc property shall be specified.
 //
 GlobalWorkerOptions.workerSrc =
-  typeof PDFJSDev === "undefined"
-    ? "../../src/pdf.worker.js"
-    : "../../build/pdf.worker.mjs";
+  "../../node_modules/pdfjs-dist/build/pdf.worker.mjs";
 
 // Some PDFs need external cmaps.
 //
-const CMAP_URL =
-  typeof PDFJSDev === "undefined"
-    ? "../../external/bcmaps/"
-    : "../../web/cmaps/";
+const CMAP_URL = new URL(
+  "../../node_modules/pdfjs-dist/cmaps/",
+  import.meta.url
+).href;
 
 const DEFAULT_URL = "../../web/compressed.tracemonkey-pldi-09.pdf";
 
@@ -41,16 +39,10 @@ const ENABLE_XFA = true;
 const SEARCH_FOR = ""; // try "Mozilla";
 
 const SANDBOX_BUNDLE_SRC = new URL(
-  typeof PDFJSDev === "undefined"
-    ? "../../build/generic/build/pdf.sandbox.mjs"
-    : "../../build/pdf.sandbox.mjs",
-  window.location
+  "../../node_modules/pdfjs-dist/build/pdf.sandbox.mjs",
+  import.meta.url
 );
-
-const WASM_URL =
-  typeof PDFJSDev === "undefined"
-    ? "../../build/generic/web/wasm/"
-    : "../../build/wasm/";
+const WASM_URL = "../../node_modules/pdfjs-dist/wasm/";
 
 const fileUrl = new URLSearchParams(location.search).get("file") ?? DEFAULT_URL;
 

@@ -29,11 +29,12 @@ function rewriteWebArchiveUrl(url) {
 async function downloadFile(file, url) {
   url = rewriteWebArchiveUrl(url);
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal: AbortSignal.timeout(30000) });
   if (!response.ok) {
     throw new Error(response.statusText);
   }
-  return fs.promises.writeFile(file, response.body);
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  return fs.promises.writeFile(file, bytes);
 }
 
 async function downloadManifestFiles(manifest) {
